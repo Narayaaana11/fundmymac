@@ -265,3 +265,100 @@ describe('Logo Asset & File Upload Security Validation', () => {
     assert.equal(check3.safe, true);
   });
 });
+
+describe('Order Refund Workflow & Production Fail-Closed Security', () => {
+  const secretKey = 'test_merchant_secret_12345';
+  const adapter = new RazorpayPaymentAdapter({
+    isTestMode: true,
+    razorpayKeyId: 'rzp_test_fixture_key',
+    razorpayKeySecret: secretKey
+  });
+
+  test('Refund workflow transitions order to refunded and restores spot availability', async () => {
+    // 1. Create order for Spot #7
+    const orderRes = await adapter.createCheckoutSession({
+      orderType: 'spot_sponsorship',
+      spotId: 7,
+      currency: 'inr',
+      sponsorName: 'Refund Test Corp',
+      sponsorEmail: 'refund@test.com'
+    });
+    assert.equal(orderRes.success, true);
+
+    // 2. Pay order with valid signature
+    const sig = crypto
+      .createHmac('sha256', secretKey)
+      .update(`${orderRes.razorpayOrderId}|pay_refund_123`)
+      .digest('hex');
+
+    const verifyRes = await adapter.verifyPaymentSignature({
+      razorpayOrderId: orderRes.razorpayOrderId,
+      razorpayPaymentId: 'pay_refund_123',
+      razorpaySignature: sig,
+      orderId: orderRes.orderId
+    });
+    assert.equal(verifyRes.verified, true);
+
+    // 3. Process refund
+    const refundRes = await adapter.processOrderRefund(
+      orderRes.orderId,
+      'Backer requested cancellation within 48-hour pre-print window',
+      'rfnd_test_ref_999'
+    );
+    assert.equal(refundRes.success, true);
+    assert.equal(refundRes.status, 'refunded');
+
+    // 4. Spot #7 should now be available for new backer
+    const rebookRes = await adapter.createCheckoutSession({
+      orderType: 'spot_sponsorship',
+      spotId: 7,
+      currency: 'inr',
+      sponsorName: 'New Sponsor Post-Refund',
+      sponsorEmail: 'new_sponsor@test.com'
+    });
+    assert.equal(rebookRes.success, true, 'Spot #7 must be claimable after refund');
+  });
+
+  test('Rejects refund request on non-paid order', async () => {
+    // Create pending order for Spot #8 (not paid)
+    const orderRes = await adapter.createCheckoutSession({
+      orderType: 'spot_sponsorship',
+      spotId: 8,
+      currency: 'inr',
+      sponsorName: 'Unpaid Corp',
+      sponsorEmail: 'unpaid@test.com'
+    });
+    assert.equal(orderRes.success, true);
+
+    const refundRes = await adapter.processOrderRefund(orderRes.orderId, ' premature refund attempt');
+    assert.equal(refundRes.success, false);
+    assert.match(refundRes.error || '', /Only confirmed paid orders can be refunded/);
+  });
+
+  test('Production fail-closed guard refuses mock sandbox when NODE_ENV is production', async () => {
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+
+    try {
+      const prodAdapterWithoutKeys = new RazorpayPaymentAdapter({
+        isTestMode: false,
+        razorpayKeyId: '',
+        razorpayKeySecret: ''
+      });
+
+      const res = await prodAdapterWithoutKeys.createCheckoutSession({
+        orderType: 'spot_sponsorship',
+        spotId: 9,
+        currency: 'inr',
+        sponsorName: 'Fail Closed Corp',
+        sponsorEmail: 'failclosed@test.com'
+      });
+
+      assert.equal(res.success, false);
+      assert.match(res.error || '', /Production payment configuration missing|Live Razorpay merchant credentials required/);
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+    }
+  });
+});
+
