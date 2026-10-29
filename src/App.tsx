@@ -25,6 +25,7 @@ export const App: React.FC = () => {
   const [selectedSpot, setSelectedSpot] = useState<BrandSpot | null>(null);
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
   const [selectedTier, setSelectedTier] = useState<SponsorTier | null>(null);
+  const [isLiveSync, setIsLiveSync] = useState(false);
 
   // Return from checkout session (verified via server)
   const [checkoutReturn, setCheckoutReturn] = useState<{
@@ -68,7 +69,11 @@ export const App: React.FC = () => {
       .from('brand_spots')
       .select('*')
       .then(({ data, error }) => {
-        if (error || !data || data.length === 0) return;
+        if (error || !data || data.length === 0) {
+          setIsLiveSync(false);
+          return;
+        }
+        setIsLiveSync(true);
         setSpots((prev) =>
           prev.map((s) => {
             const dbSpot = data.find((d: { id: number }) => d.id === s.id);
@@ -168,7 +173,10 @@ export const App: React.FC = () => {
           }
         }
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (!isMounted) return;
+        setIsLiveSync(status === 'SUBSCRIBED');
+      });
 
     return () => {
       isMounted = false;
@@ -336,6 +344,7 @@ export const App: React.FC = () => {
           currency={currency}
           spots={spots}
           onSpotClick={handleSpotClick}
+          isLiveSync={isLiveSync}
         />
 
         {/* 5. How It Works (3 Steps) */}

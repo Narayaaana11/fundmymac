@@ -195,7 +195,7 @@ export const DonationModal: React.FC<DonationModalProps> = ({
         </p>
 
         {errorMessage && (
-          <div style={{ background: '#fef2f2', border: '1px solid #f87171', color: '#991b1b', padding: '10px 14px', borderRadius: '8px', fontSize: '12px', margin: '10px 0' }}>
+          <div className="bmm-error-banner" style={{ background: '#fef2f2', border: '1px solid #f87171', color: '#991b1b', padding: '10px 14px', borderRadius: '8px', fontSize: '12px', margin: '10px 0' }}>
             ⚠️ {errorMessage}
           </div>
         )}
@@ -292,7 +292,7 @@ export const DonationModal: React.FC<DonationModalProps> = ({
           >
             {isSubmitting
               ? 'Opening Secure Razorpay Checkout...'
-              : `Proceed to Pay ${effectiveAmount.toLocaleString()} ${currencySymbol}`}
+              : `Proceed to Pay ${formatDonationAmount(effectiveAmount)}`}
           </button>
         </form>
       </div>

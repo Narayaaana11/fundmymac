@@ -35,6 +35,8 @@
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--ink);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .bmm-brand-logo {
@@ -929,6 +931,17 @@
   border-bottom: 1px solid rgba(210, 210, 215, 0.5);
 }
 
+@media (max-width: 480px) {
+  .bmm-leaderboard-item {
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .bmm-leaderboard-name {
+    flex: 1 1 calc(100% - 40px);
+  }
+}
+
 .bmm-medal {
   display: grid;
   place-items: center;
@@ -1442,7 +1455,7 @@
   }
 }
 
-@media (max-width: 360px) {
+@media (max-width: 420px) {
   .bmm-nav-vesper-tag {
     display: none;
   }

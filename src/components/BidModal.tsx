@@ -48,7 +48,12 @@ export const BidModal: React.FC<BidModalProps> = ({
   if (!spot) return null;
 
   const currentBid = currency === 'INR' ? (spot.topBidInr || Math.round(spot.topBidUsd * 84)) : currency === 'EUR' ? spot.topBidEur : spot.topBidUsd;
-  const currencySymbol = currency === 'INR' ? '₹' : currency === 'EUR' ? '€' : '$';
+
+  const formatPriceVal = (val: number) => {
+    if (currency === 'INR') return `₹${val.toLocaleString('en-IN')}`;
+    if (currency === 'EUR') return `${val.toLocaleString()} €`;
+    return `$${val.toLocaleString()}`;
+  };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLogoError(null);
@@ -247,7 +252,7 @@ export const BidModal: React.FC<BidModalProps> = ({
             </h4>
 
             {errorMessage && (
-              <div style={{ background: '#fef2f2', border: '1px solid #f87171', color: '#991b1b', padding: '10px 14px', borderRadius: '8px', fontSize: '12px', marginBottom: '12px' }}>
+              <div className="bmm-error-banner" style={{ background: '#fef2f2', border: '1px solid #f87171', color: '#991b1b', padding: '10px 14px', borderRadius: '8px', fontSize: '12px', marginBottom: '12px' }}>
                 ⚠️ {errorMessage}
               </div>
             )}
@@ -336,7 +341,7 @@ export const BidModal: React.FC<BidModalProps> = ({
             <div style={{ background: '#f5f5f7', padding: '12px', borderRadius: '8px', marginBottom: '14px', fontSize: '12px', color: '#1d1d1f', border: '1px solid #e5e5ea' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                 <span>Canonical Placement Amount:</span>
-                <strong>{currentBid.toLocaleString()} {currencySymbol}</strong>
+                <strong>{formatPriceVal(currentBid)}</strong>
               </div>
               <div style={{ fontSize: '11px', color: '#86868b' }}>
                 Payment is processed securely via Razorpay (UPI, Cards, NetBanking). Spot #{spot.id} will be held exclusively for you during checkout.
@@ -351,7 +356,7 @@ export const BidModal: React.FC<BidModalProps> = ({
             >
               {isSubmitting
                 ? 'Securing Reservation & Loading Checkout...'
-                : `Proceed to Secure Checkout · ${currentBid.toLocaleString()} ${currencySymbol}`}
+                : `Proceed to Secure Checkout · ${formatPriceVal(currentBid)}`}
             </button>
           </form>
         )}

@@ -100,12 +100,26 @@ export const CheckoutVerificationModal: React.FC<CheckoutVerificationModalProps>
     }
   };
 
-  const amountDisplay = orderDetails?.amountCents
-    ? `${(orderDetails.amountCents / 100).toLocaleString()} ${orderDetails.currency?.toUpperCase()}`
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [onClose]);
+
+  const curr = orderDetails?.currency?.toLowerCase();
+  const amt = orderDetails?.amountCents ? Math.round(orderDetails.amountCents / 100) : 0;
+  const amountDisplay = amt > 0
+    ? (curr === 'inr' ? `₹${amt.toLocaleString('en-IN')}` : curr === 'eur' ? `${amt.toLocaleString()} €` : `$${amt.toLocaleString()}`)
     : '';
 
   return (
-    <div className="bmm-modal-overlay" onClick={onClose}>
+    <div className="bmm-modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="checkout-modal-title">
       <div className="bmm-modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px' }}>
         <button
           type="button"
@@ -127,7 +141,7 @@ export const CheckoutVerificationModal: React.FC<CheckoutVerificationModalProps>
         ) : isPaid ? (
           <div className="bmm-modal-success-box">
             <div className="bmm-success-icon-ring">✓</div>
-            <h3 className="bmm-modal-title" style={{ marginTop: '14px' }}>
+            <h3 id="checkout-modal-title" className="bmm-modal-title" style={{ marginTop: '14px' }}>
               Payment Confirmed!
             </h3>
             <p className="bmm-modal-subtitle" style={{ maxWidth: '400px', margin: '8px auto 16px auto' }}>

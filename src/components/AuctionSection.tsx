@@ -9,12 +9,14 @@ interface AuctionSectionProps {
   currency: DisplayCurrency;
   onSpotClick: (spot: BrandSpot) => void;
   spots?: BrandSpot[];
+  isLiveSync?: boolean;
 }
 
 export const AuctionSection: React.FC<AuctionSectionProps> = ({
   currency,
   onSpotClick,
-  spots
+  spots,
+  isLiveSync = false
 }) => {
   const [filterSurface, setFilterSurface] = useState<'all' | 'lid' | 'inside' | 'accessory'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,12 +52,14 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
         {/* Available Spots Badge */}
         <div className="bmm-spots-taken-badge">
           <span className="bmm-pulse-dot">
-            <span />
-            <span />
+            <span style={{ background: isLiveSync ? '#34c759' : '#8e8e93' }} />
+            <span style={{ background: isLiveSync ? 'rgba(52, 199, 89, 0.4)' : 'rgba(142, 142, 147, 0.4)' }} />
           </span>
           <span>· {openSpotsCount} of {activeSpots.length} Sticker Spots Open for Sponsorship</span>
           <span className="bmm-badge-divider">|</span>
-          <span className="bmm-bids-count-pill">Live Reserve</span>
+          <span className="bmm-bids-count-pill">
+            {isLiveSync ? 'Live Reserve' : 'Canonical Catalog (Offline)'}
+          </span>
         </div>
 
         <h2 className="bmm-auction-h2">Available Spots on the Mac</h2>

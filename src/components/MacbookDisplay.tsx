@@ -325,7 +325,7 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
                           />
                         ) : (
                           <span className="bmm-spot-sponsor-title">
-                            {viewMode === 'final' ? '' : spot.sponsorName}
+                            {viewMode === 'final' ? '' : (spot.isSold ? spot.sponsorName : (spot.id === 2 ? 'Prime Marquee' : 'Open Spot'))}
                           </span>
                         )}
                       </div>
@@ -409,7 +409,7 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
                               lineHeight: 1.15
                             }}
                           >
-                            {viewMode === 'final' ? '' : spot.sponsorName}
+                            {viewMode === 'final' ? '' : (spot.isSold ? spot.sponsorName : 'Open Spot')}
                           </span>
                         )}
                       </div>

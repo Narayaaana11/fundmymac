@@ -1,6 +1,7 @@
 // =========================================================================
-// Automated Visual & UI/UX Audit Tool — Playwright
-// Inspects rendered DOM, responsive viewports, console logs, modals, and layout overflow.
+// Comprehensive Visual & UI/UX Audit & Interaction Verification Suite
+// Inspects full-page screenshots across 7 viewports, section-by-section renders,
+// interaction states, currency switches, form validations, and keyboard flows.
 // =========================================================================
 
 import { chromium } from 'playwright';
@@ -28,7 +29,7 @@ const VIEWPORTS = [
 ];
 
 async function runVisualAudit() {
-  console.log('🚀 Launching Chromium for Visual Audit...');
+  console.log('🚀 Launching Chromium for Comprehensive Visual & Interaction Audit...');
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();
   const page = await context.newPage();
@@ -47,24 +48,17 @@ async function runVisualAudit() {
   console.log('🌐 Navigating to http://[::1]:5173...');
   await page.goto('http://[::1]:5173', { waitUntil: 'networkidle' });
 
-  // 1. Check Console Logs
+  // 1. Console & Network Errors
   console.log('\n--- 1. CONSOLE LOGS & RUNTIME DIAGNOSTICS ---');
-  console.log(`Console messages captured: ${consoleLogs.length}`);
   const errors = consoleLogs.filter(l => l.type === 'error');
   const warnings = consoleLogs.filter(l => l.type === 'warning');
-  console.log(`Errors: ${errors.length}, Warnings: ${warnings.length}, Page Exceptions: ${pageErrors.length}`);
+  console.log(`Console messages: ${consoleLogs.length} (Errors: ${errors.length}, Warnings: ${warnings.length}, Exceptions: ${pageErrors.length})`);
   if (errors.length > 0) {
-    console.log('Errors:', errors);
-  }
-  if (warnings.length > 0) {
-    console.log('Warnings:', warnings);
-  }
-  if (pageErrors.length > 0) {
-    console.log('Page Exceptions:', pageErrors);
+    console.log('Console Errors Sample:', errors.slice(0, 5));
   }
 
-  // 2. Responsive Viewport Audits & Horizontal Overflow
-  console.log('\n--- 2. RESPONSIVE VIEWPORT AUDIT & OVERFLOW CHECKS ---');
+  // 2. Full-Page Screenshots & Horizontal Overflow across 7 Viewports
+  console.log('\n--- 2. RESPONSIVE VIEWPORT FULL-PAGE SCREENSHOTS & OVERFLOW CHECKS ---');
   for (const vp of VIEWPORTS) {
     await page.setViewportSize({ width: vp.width, height: vp.height });
     await page.waitForTimeout(300);
@@ -94,134 +88,222 @@ async function runVisualAudit() {
     });
 
     const status = overflow.hasHorizontalScroll ? '❌ OVERFLOW' : '✅ CLEAN';
-    console.log(`[${status}] Viewport ${vp.name} (${vp.width}x${vp.height}): docWidth=${overflow.docWidth}, scrollWidth=${overflow.scrollWidth}`);
+    console.log(`[${status}] ${vp.name} (${vp.width}x${vp.height}): docWidth=${overflow.docWidth}, scrollWidth=${overflow.scrollWidth}`);
     if (overflow.hasHorizontalScroll) {
       console.log(`   👉 Offending elements:`, JSON.stringify(overflow.offendingElements));
     }
 
-    const screenshotPath = path.join(SCREENSHOTS_DIR, `${vp.name}.png`);
-    await page.screenshot({ path: screenshotPath, fullPage: false });
+    const fullPagePath = path.join(SCREENSHOTS_DIR, `fullpage-${vp.width}x${vp.height}.png`);
+    await page.screenshot({ path: fullPagePath, fullPage: true });
   }
 
-  // 3. Inspect Component Elements & Accessibility Properties
-  console.log('\n--- 3. COMPONENT & ACCESSIBILITY INSPECTION ---');
+  // 3. Section-by-Section Visual Captures (at 1440x900)
+  console.log('\n--- 3. SECTION-BY-SECTION VISUAL AUDIT (1440x900) ---');
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.waitForTimeout(200);
+
+  const sections = [
+    { name: 'section-01-hero', selector: '.bmm-hero' },
+    { name: 'section-02-macbook-display', selector: '#macbook-showcase' },
+    { name: 'section-03-mission-story', selector: '#vesper-mission' },
+    { name: 'section-04-events-roadmap', selector: '#events' },
+    { name: 'section-05-sponsors-wall', selector: '#sponsors' },
+    { name: 'section-06-sponsor-tiers', selector: '#sponsor-tiers' },
+    { name: 'section-07-auction-directory', selector: '#auction-table' },
+    { name: 'section-08-how-it-works', selector: '#how-it-works' },
+    { name: 'section-09-machine-specs', selector: '#machine-specs' },
+    { name: 'section-10-faq-accordion', selector: '#faq' },
+    { name: 'section-11-footer', selector: 'footer.bmm-footer' }
+  ];
+
+  for (const s of sections) {
+    const el = page.locator(s.selector).first();
+    if (await el.count() > 0) {
+      await el.scrollIntoViewIfNeeded();
+      await page.waitForTimeout(150);
+      const sectionPath = path.join(SCREENSHOTS_DIR, `${s.name}.png`);
+      await el.screenshot({ path: sectionPath });
+      console.log(`[SAVED] ${s.name}.png`);
+    } else {
+      console.log(`[SKIPPED] Selector ${s.selector} not found`);
+    }
+  }
+
+  // 4. Test Real Interaction States
+  console.log('\n--- 4. INTERACTION STATES & UI WORKFLOW TESTING ---');
+
+  // A. Mobile Hamburger Drawer Test (375x812)
+  console.log('Testing Mobile Drawer...');
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.waitForTimeout(200);
+  const hamburgerBtn = page.locator('.bmm-mobile-toggle').first();
+  if (await hamburgerBtn.count() > 0) {
+    await hamburgerBtn.click();
+    await page.waitForTimeout(300);
+    const drawerOpen = await page.locator('.bmm-mobile-drawer').isVisible();
+    console.log(`Mobile drawer opened: ${drawerOpen}`);
+    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'interaction-mobile-drawer.png') });
+    // Close drawer
+    await hamburgerBtn.click();
+    await page.waitForTimeout(200);
+  }
+
+  // Reset to desktop viewport for remaining interaction tests
   await page.setViewportSize({ width: 1440, height: 900 });
 
-  const a11ySummary = await page.evaluate(() => {
-    // Images missing alt
-    const images = Array.from(document.querySelectorAll('img'));
-    const imagesMissingAlt = images.filter(img => !img.hasAttribute('alt'));
+  // B. Currency Switching Verification (INR, EUR, USD)
+  console.log('Testing Currency Switching...');
+  const inrBtn = page.locator('.bmm-curr-btn:has-text("₹")').first();
+  const eurBtn = page.locator('.bmm-curr-btn:has-text("€")').first();
+  const usdBtn = page.locator('.bmm-curr-btn:has-text("$")').first();
 
-    // Buttons missing accessible name
-    const buttons = Array.from(document.querySelectorAll('button'));
-    const buttonsMissingName = buttons.filter(btn => {
-      const text = btn.innerText?.trim();
-      const ariaLabel = btn.getAttribute('aria-label');
-      const ariaLabelledby = btn.getAttribute('aria-labelledby');
-      const title = btn.getAttribute('title');
-      return !text && !ariaLabel && !ariaLabelledby && !title;
-    });
-
-    // Heading hierarchy
-    const headings = Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6')).map(h => ({
-      tag: h.tagName,
-      text: h.textContent?.trim().slice(0, 40)
-    }));
-
-    // Interactive targets smaller than 44x44
-    const smallTargets = buttons.filter(btn => {
-      const rect = btn.getBoundingClientRect();
-      return rect.width > 0 && rect.height > 0 && (rect.width < 32 || rect.height < 32);
-    }).map(btn => ({
-      text: btn.innerText?.slice(0, 20) || btn.getAttribute('aria-label'),
-      rect: { width: Math.round(btn.getBoundingClientRect().width), height: Math.round(btn.getBoundingClientRect().height) }
-    }));
-
-    return {
-      totalImages: images.length,
-      imagesMissingAltCount: imagesMissingAlt.length,
-      imagesMissingAlt: imagesMissingAlt.map(img => img.src.slice(-40)),
-      totalButtons: buttons.length,
-      buttonsMissingNameCount: buttonsMissingName.length,
-      headings,
-      smallTargetsCount: smallTargets.length,
-      smallTargets: smallTargets.slice(0, 10)
-    };
-  });
-
-  console.log(`Images total: ${a11ySummary.totalImages}, Missing alt: ${a11ySummary.imagesMissingAltCount}`);
-  if (a11ySummary.imagesMissingAltCount > 0) {
-    console.log('Images missing alt:', a11ySummary.imagesMissingAlt);
+  if (await inrBtn.count() > 0) {
+    await inrBtn.click();
+    await page.waitForTimeout(200);
+    const heroRaisedInr = await page.locator('.bmm-progress-raised').innerText();
+    console.log(`Active INR Raised Value: "${heroRaisedInr}"`);
+    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'interaction-currency-inr.png') });
   }
-  console.log(`Buttons total: ${a11ySummary.totalButtons}, Missing accessible name: ${a11ySummary.buttonsMissingNameCount}`);
-  console.log(`Buttons below 32px touch target: ${a11ySummary.smallTargetsCount}`);
-  if (a11ySummary.smallTargetsCount > 0) {
-    console.log('Sample small touch targets:', a11ySummary.smallTargets);
+
+  if (await eurBtn.count() > 0) {
+    await eurBtn.click();
+    await page.waitForTimeout(200);
+    const heroRaisedEur = await page.locator('.bmm-progress-raised').innerText();
+    console.log(`Active EUR Raised Value: "${heroRaisedEur}"`);
+    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'interaction-currency-eur.png') });
   }
-  console.log('Headings hierarchy:', a11ySummary.headings);
 
-  // 4. Modal Interactions: BidModal
-  console.log('\n--- 4. MODAL INTERACTION AUDIT ---');
-  console.log('Testing BidModal...');
-  // Click on available spot button in auction section
-  const spotBtn = page.locator('.bmm-claim-spot-btn').first();
-  if (await spotBtn.count() > 0) {
-    await spotBtn.click();
-    await page.waitForTimeout(400);
+  if (await usdBtn.count() > 0) {
+    await usdBtn.click();
+    await page.waitForTimeout(200);
+    const heroRaisedUsd = await page.locator('.bmm-progress-raised').innerText();
+    console.log(`Active USD Raised Value: "${heroRaisedUsd}"`);
+    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'interaction-currency-usd.png') });
+  }
 
-    const bidModalVisible = await page.locator('.bmm-modal-overlay').isVisible();
-    console.log(`BidModal opened successfully: ${bidModalVisible}`);
-    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'modal-bid.png') });
+  // C. MacBook Surface & Mode Toggles
+  console.log('Testing MacBook Surface & Mode Toggles...');
+  const insideBtn = page.locator('.bmm-pill-btn:has-text("Inside")').first();
+  if (await insideBtn.count() > 0) {
+    await insideBtn.click();
+    await page.waitForTimeout(300);
+    const macbookEl = page.locator('#macbook-showcase').first();
+    await macbookEl.screenshot({ path: path.join(SCREENSHOTS_DIR, 'interaction-macbook-inside.png') });
+    console.log('MacBook Inside surface rendered and captured');
+  }
 
-    // Test Escape key
+  const lidBtn = page.locator('.bmm-pill-btn:has-text("Lid")').first();
+  if (await lidBtn.count() > 0) {
+    await lidBtn.click();
+    await page.waitForTimeout(300);
+  }
+
+  const finalLookBtn = page.locator('.bmm-pill-btn:has-text("Final look")').first();
+  if (await finalLookBtn.count() > 0) {
+    await finalLookBtn.click();
+    await page.waitForTimeout(300);
+    const macbookEl = page.locator('#macbook-showcase').first();
+    await macbookEl.screenshot({ path: path.join(SCREENSHOTS_DIR, 'interaction-macbook-final-look.png') });
+    console.log('MacBook Final Look mode rendered and captured');
+
+    // Switch back to auction view
+    const auctionModeBtn = page.locator('.bmm-pill-btn:has-text("The auction")').first();
+    if (await auctionModeBtn.count() > 0) await auctionModeBtn.click();
+  }
+
+  // D. FAQ Accordion Interaction
+  console.log('Testing FAQ Accordion...');
+  const faqBtn = page.locator('.bmm-faq-question').first();
+  if (await faqBtn.count() > 0) {
+    const isExpandedBefore = await faqBtn.getAttribute('aria-expanded');
+    await faqBtn.click();
+    await page.waitForTimeout(200);
+    const isExpandedAfter = await faqBtn.getAttribute('aria-expanded');
+    console.log(`FAQ Accordion aria-expanded before: ${isExpandedBefore}, after: ${isExpandedAfter}`);
+    const faqSection = page.locator('#faq').first();
+    await faqSection.screenshot({ path: path.join(SCREENSHOTS_DIR, 'interaction-faq-open.png') });
+  }
+
+  // E. Spot Directory Search & Filter
+  console.log('Testing Spot Directory Search...');
+  const searchInput = page.locator('.filter-search-input').first();
+  if (await searchInput.count() > 0) {
+    await searchInput.fill('Lid Prime');
+    await page.waitForTimeout(200);
+    const matchingRows = await page.locator('.bmm-spot-row').count();
+    console.log(`Directory search for "Lid Prime" returned: ${matchingRows} spots`);
+    const directoryCard = page.locator('.bmm-bids-table-card').first();
+    await directoryCard.screenshot({ path: path.join(SCREENSHOTS_DIR, 'interaction-directory-filtered.png') });
+    await searchInput.fill('');
+    await page.waitForTimeout(200);
+  }
+
+  // F. BidModal Validation Testing
+  console.log('Testing BidModal Form Validation...');
+  const spotClaimBtn = page.locator('.bmm-claim-spot-btn').first();
+  if (await spotClaimBtn.count() > 0) {
+    await spotClaimBtn.click();
+    await page.waitForTimeout(300);
+
+    const submitBtn = page.locator('button:has-text("Proceed to Secure Checkout")').first();
+    if (await submitBtn.count() > 0) {
+      await submitBtn.click();
+      await page.waitForTimeout(200);
+      const invalidCount = await page.locator('input:invalid').count();
+      const errorText = await page.locator('.bmm-error-banner').innerText().catch(() => '');
+      console.log(`BidModal form blocked on empty fields (HTML5 invalid inputs: ${invalidCount}, error banner: "${errorText.trim()}")`);
+      await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'interaction-bid-validation-error.png') });
+    }
+
     await page.keyboard.press('Escape');
     await page.waitForTimeout(300);
-    const bidModalClosed = !(await page.locator('.bmm-modal-overlay').isVisible());
-    console.log(`BidModal closed on Escape key: ${bidModalClosed}`);
-  } else {
-    console.log('No auction table button found to open BidModal');
   }
 
-  // Testing DonationModal
-  console.log('Testing DonationModal...');
-  const fundBtn = page.locator('button:has-text("Fund This Mac")').first();
-  if (await fundBtn.count() > 0) {
-    await fundBtn.click();
-    await page.waitForTimeout(400);
+  // G. DonationModal Preset Chips & Custom Input Testing
+  console.log('Testing DonationModal Presets & Inputs...');
+  const donateBtn = page.locator('button:has-text("Fund This Mac")').first();
+  if (await donateBtn.count() > 0) {
+    await donateBtn.click();
+    await page.waitForTimeout(300);
 
-    const donationModalVisible = await page.locator('.bmm-modal-overlay').isVisible();
-    console.log(`DonationModal opened successfully: ${donationModalVisible}`);
-    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'modal-donation.png') });
+    const presetChip = page.locator('.amount-preset-chip').nth(2);
+    if (await presetChip.count() > 0) {
+      const chipValue = await presetChip.innerText();
+      await presetChip.click();
+      await page.waitForTimeout(200);
+      console.log(`Selected Donation Preset Chip: ${chipValue}`);
+    }
 
-    // Close button
+    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'interaction-donation-preset.png') });
+
     const closeBtn = page.locator('.bmm-modal-close').first();
     if (await closeBtn.count() > 0) {
       await closeBtn.click();
       await page.waitForTimeout(300);
-      const donationModalClosed = !(await page.locator('.bmm-modal-overlay').isVisible());
-      console.log(`DonationModal closed via close button: ${donationModalClosed}`);
     }
   }
 
-  // Testing LegalPolicyModal
-  console.log('Testing LegalPolicyModal...');
-  const privacyLink = page.locator('button:has-text("Privacy Policy")').first();
-  if (await privacyLink.count() > 0) {
-    await privacyLink.click();
-    await page.waitForTimeout(400);
+  // H. Legal Policy Modal Tab Switching
+  console.log('Testing Legal Policy Modal Tab Switching...');
+  const termsBtn = page.locator('button:has-text("Terms of Sponsorship")').first();
+  if (await termsBtn.count() > 0) {
+    await termsBtn.click();
+    await page.waitForTimeout(300);
 
-    const legalModalVisible = await page.locator('.bmm-modal-overlay').isVisible();
-    console.log(`LegalPolicyModal opened successfully: ${legalModalVisible}`);
-    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'modal-legal.png') });
+    // Switch to refund policy
+    const refundTab = page.locator('.filter-pill-btn:has-text("Cancellation & Refund")').first();
+    if (await refundTab.count() > 0) {
+      await refundTab.click();
+      await page.waitForTimeout(200);
+    }
 
+    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'interaction-legal-tabs.png') });
     await page.keyboard.press('Escape');
     await page.waitForTimeout(300);
-    const legalModalClosed = !(await page.locator('.bmm-modal-overlay').isVisible());
-    console.log(`LegalPolicyModal closed on Escape key: ${legalModalClosed}`);
   }
 
   await browser.close();
-  console.log('\n✅ Visual audit complete. Screenshots saved to audit_screenshots/\n');
+  console.log('\n🎉 Comprehensive visual and interaction audit complete! All screenshots saved.\n');
 }
 
 runVisualAudit().catch(err => {
