@@ -11,7 +11,7 @@ export const CornerWidget: React.FC<CornerWidgetProps> = ({
   currency,
   onClaimCorner
 }) => {
-  const claimPrice = currency === 'INR' ? '₹6,300' : currency === 'EUR' ? '25 €' : '$25';
+  const claimPrice = currency === 'INR' ? '₹6,300' : currency === 'EUR' ? '69 €' : '$75';
 
   return (
     <>
@@ -43,7 +43,7 @@ export const CornerWidget: React.FC<CornerWidgetProps> = ({
             type="button"
             onClick={onClaimCorner}
             className="bmm-btn-blue"
-            style={{ width: '100%', fontSize: '11px', padding: '6px 0' }}
+            style={{ width: '100%', fontSize: '12px', minHeight: '36px', padding: '8px 12px' }}
           >
             Claim The Corner ({claimPrice})
           </button>

@@ -39,28 +39,28 @@ export const BrandMyMacFooter: React.FC = () => {
             <button
               type="button"
               onClick={() => setActivePolicyTab('privacy')}
-              style={{ background: 'none', border: 'none', color: 'var(--ink-2)', cursor: 'pointer', padding: 0, textDecoration: 'underline', font: 'inherit' }}
+              style={{ background: 'none', border: 'none', color: 'var(--ink-2)', cursor: 'pointer', padding: '6px 8px', minHeight: '34px', textDecoration: 'underline', font: 'inherit', display: 'inline-flex', alignItems: 'center' }}
             >
               Privacy Policy
             </button>
             <button
               type="button"
               onClick={() => setActivePolicyTab('terms')}
-              style={{ background: 'none', border: 'none', color: 'var(--ink-2)', cursor: 'pointer', padding: 0, textDecoration: 'underline', font: 'inherit' }}
+              style={{ background: 'none', border: 'none', color: 'var(--ink-2)', cursor: 'pointer', padding: '6px 8px', minHeight: '34px', textDecoration: 'underline', font: 'inherit', display: 'inline-flex', alignItems: 'center' }}
             >
               Terms of Sponsorship
             </button>
             <button
               type="button"
               onClick={() => setActivePolicyTab('refund')}
-              style={{ background: 'none', border: 'none', color: 'var(--ink-2)', cursor: 'pointer', padding: 0, textDecoration: 'underline', font: 'inherit' }}
+              style={{ background: 'none', border: 'none', color: 'var(--ink-2)', cursor: 'pointer', padding: '6px 8px', minHeight: '34px', textDecoration: 'underline', font: 'inherit', display: 'inline-flex', alignItems: 'center' }}
             >
               Cancellation & Refund Policy
             </button>
             <button
               type="button"
               onClick={() => setActivePolicyTab('contact')}
-              style={{ background: 'none', border: 'none', color: 'var(--ink-2)', cursor: 'pointer', padding: 0, textDecoration: 'underline', font: 'inherit' }}
+              style={{ background: 'none', border: 'none', color: 'var(--ink-2)', cursor: 'pointer', padding: '6px 8px', minHeight: '34px', textDecoration: 'underline', font: 'inherit', display: 'inline-flex', alignItems: 'center' }}
             >
               Operator, Support & Grievances
             </button>

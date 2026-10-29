@@ -38,7 +38,11 @@ export const BidModal: React.FC<BidModalProps> = ({
       if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
   }, [onClose]);
 
   if (!spot) return null;
@@ -166,13 +170,13 @@ export const BidModal: React.FC<BidModalProps> = ({
   };
 
   return (
-    <div className="bmm-modal-overlay" onClick={onClose}>
+    <div className="bmm-modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="bid-modal-title">
       <div className="bmm-modal-card" onClick={(e) => e.stopPropagation()}>
         <button
           type="button"
           onClick={onClose}
           className="bmm-modal-close"
-          aria-label="Close"
+          aria-label="Close dialog"
           disabled={isSubmitting}
         >
           ✕
@@ -184,7 +188,7 @@ export const BidModal: React.FC<BidModalProps> = ({
           </span>
         </div>
 
-        <h3 className="bmm-modal-title">{spot.name}</h3>
+        <h3 id="bid-modal-title" className="bmm-modal-title">{spot.name}</h3>
         <p className="bmm-modal-subtitle">
           {spot.size} · {spot.dimensions} ({spot.location})
         </p>
@@ -193,7 +197,7 @@ export const BidModal: React.FC<BidModalProps> = ({
           <div>
             <span className="bmm-modal-stat-label">Sponsorship Price</span>
             <span className="bmm-modal-stat-val" style={{ color: 'var(--blue)' }}>
-              {currentBid.toLocaleString()} {currencySymbol}
+              {currency === 'INR' ? `₹${currentBid.toLocaleString('en-IN')}` : currency === 'EUR' ? `${currentBid.toLocaleString()} €` : `$${currentBid.toLocaleString()}`}
             </span>
           </div>
           <div>

@@ -78,7 +78,15 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
               <li
                 key={spot.id}
                 className="bmm-leaderboard-item"
+                role="button"
+                tabIndex={0}
                 onClick={() => onSpotClick(spot)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onSpotClick(spot);
+                  }
+                }}
                 style={{ cursor: 'pointer' }}
               >
                 <span
@@ -110,7 +118,15 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
                       Claimed
                     </span>
                   ) : (
-                    <button type="button" className="bmm-btn-blue" style={{ fontSize: '11px', padding: '4px 10px' }}>
+                    <button
+                      type="button"
+                      className="bmm-btn-blue bmm-claim-spot-btn"
+                      style={{ fontSize: '12px', minHeight: '34px', padding: '6px 14px' }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSpotClick(spot);
+                      }}
+                    >
                       Claim Spot
                     </button>
                   )}
@@ -162,7 +178,15 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
               <div
                 key={spot.id}
                 className="bmm-spot-row"
+                role="button"
+                tabIndex={0}
                 onClick={() => onSpotClick(spot)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onSpotClick(spot);
+                  }
+                }}
                 style={{ cursor: 'pointer' }}
               >
                 <div className="bmm-spot-row-left">

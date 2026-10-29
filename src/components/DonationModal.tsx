@@ -18,7 +18,7 @@ export const DonationModal: React.FC<DonationModalProps> = ({
   currency,
   onClose
 }) => {
-  const [customAmount, setCustomAmount] = useState<number>(50);
+  const [customAmount, setCustomAmount] = useState<number>(() => currency === 'INR' ? 1000 : 50);
   const [sponsorName, setSponsorName] = useState('');
   const [sponsorEmail, setSponsorEmail] = useState('');
   const [sponsorUrl, setSponsorUrl] = useState('');
@@ -29,15 +29,37 @@ export const DonationModal: React.FC<DonationModalProps> = ({
     ? (currency === 'INR' ? (selectedTier.priceInr || Math.round(selectedTier.priceUsd * 84)) : currency === 'EUR' ? selectedTier.priceEur : selectedTier.priceUsd)
     : customAmount;
 
+  const [prevCurrency, setPrevCurrency] = useState(currency);
+  if (prevCurrency !== currency) {
+    setPrevCurrency(currency);
+    setCustomAmount(currency === 'INR' ? 1000 : 50);
+  }
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
+
+  const quickAmounts = currency === 'INR'
+    ? [500, 1000, 2500, 5000, 10000, 25000]
+    : [25, 50, 100, 250, 500, 1000];
+
+  const formatDonationAmount = (amt: number) => {
+    if (currency === 'INR') return `₹${amt.toLocaleString('en-IN')}`;
+    if (currency === 'EUR') return `${amt.toLocaleString()} €`;
+    return `$${amt.toLocaleString()}`;
+  };
 
   const currencySymbol = currency === 'INR' ? '₹' : currency === 'EUR' ? '€' : '$';
 
@@ -147,13 +169,13 @@ export const DonationModal: React.FC<DonationModalProps> = ({
   };
 
   return (
-    <div className="bmm-modal-overlay" onClick={onClose}>
+    <div className="bmm-modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="donation-modal-title">
       <div className="bmm-modal-card" onClick={(e) => e.stopPropagation()}>
         <button
           type="button"
           onClick={onClose}
           className="bmm-modal-close"
-          aria-label="Close"
+          aria-label="Close dialog"
           disabled={isSubmitting}
         >
           ✕
@@ -165,7 +187,7 @@ export const DonationModal: React.FC<DonationModalProps> = ({
           </span>
         </div>
 
-        <h3 className="bmm-modal-title">
+        <h3 id="donation-modal-title" className="bmm-modal-title">
           {selectedTier ? `Sponsor as ${selectedTier.name}` : 'Support Fund My Mac'}
         </h3>
         <p className="bmm-modal-subtitle">
@@ -184,7 +206,7 @@ export const DonationModal: React.FC<DonationModalProps> = ({
             <div className="donation-amount-section">
               <label className="bmm-form-label">Contribution Amount ({currencySymbol}):</label>
               <div className="quick-amount-chips">
-                {[25, 50, 100, 250, 500, 1000].map((amt) => (
+                {quickAmounts.map((amt) => (
                   <button
                     key={amt}
                     type="button"
@@ -192,7 +214,7 @@ export const DonationModal: React.FC<DonationModalProps> = ({
                     className={`amount-chip ${customAmount === amt ? 'active' : ''}`}
                     disabled={isSubmitting}
                   >
-                    {amt} {currencySymbol}
+                    {formatDonationAmount(amt)}
                   </button>
                 ))}
               </div>
@@ -201,9 +223,9 @@ export const DonationModal: React.FC<DonationModalProps> = ({
                 <span className="curr-sym">{currencySymbol}</span>
                 <input
                   type="number"
-                  min="5"
+                  min={currency === 'INR' ? '500' : '5'}
                   value={customAmount}
-                  onChange={(e) => setCustomAmount(Math.max(5, Number(e.target.value)))}
+                  onChange={(e) => setCustomAmount(Math.max(currency === 'INR' ? 500 : 5, Number(e.target.value)))}
                   className="custom-amt-field"
                   required
                   disabled={isSubmitting}
@@ -216,7 +238,7 @@ export const DonationModal: React.FC<DonationModalProps> = ({
             <div style={{ background: '#f5f5f7', padding: '12px', borderRadius: '8px', margin: '12px 0', border: '1px solid #e5e5ea' }}>
               <span style={{ fontSize: '11px', color: '#86868b', textTransform: 'uppercase' }}>Selected Tier Amount:</span>
               <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--blue)' }}>
-                {effectiveAmount.toLocaleString()} {currencySymbol}
+                {formatDonationAmount(effectiveAmount)}
               </div>
             </div>
           )}

@@ -31,3 +31,6 @@ dist-ssr
 # Supabase temporary files
 supabase/.temp/
 .temp/
+
+# Visual audit screenshots
+audit_screenshots/
