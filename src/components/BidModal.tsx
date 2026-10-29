@@ -3,9 +3,11 @@ import type { BrandSpot } from '../data/fundMyMacData';
 import { initiateCheckoutSession, loadRazorpayScript, verifyRazorpayPayment } from '../lib/checkoutApi';
 import { validateLogoFile } from '../server/payment/assetValidator';
 
+import type { DisplayCurrency } from './BrandMyMacNavbar';
+
 interface BidModalProps {
   spot: BrandSpot | null;
-  currency: 'EUR' | 'USD';
+  currency: DisplayCurrency;
   onClose: () => void;
   onConfirmBid?: (
     spotId: number,
@@ -41,8 +43,8 @@ export const BidModal: React.FC<BidModalProps> = ({
 
   if (!spot) return null;
 
-  const currentBid = currency === 'EUR' ? spot.topBidEur : spot.topBidUsd;
-  const currencySymbol = currency === 'EUR' ? '€' : '$';
+  const currentBid = currency === 'INR' ? (spot.topBidInr || Math.round(spot.topBidUsd * 84)) : currency === 'EUR' ? spot.topBidEur : spot.topBidUsd;
+  const currencySymbol = currency === 'INR' ? '₹' : currency === 'EUR' ? '€' : '$';
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLogoError(null);
@@ -85,7 +87,7 @@ export const BidModal: React.FC<BidModalProps> = ({
       const result = await initiateCheckoutSession({
         orderType: 'spot_sponsorship',
         spotId: spot.id,
-        currency: currency.toLowerCase() as 'usd' | 'eur',
+        currency: currency.toLowerCase() as 'inr' | 'usd' | 'eur',
         sponsorName: brandName.trim(),
         sponsorUrl: websiteUrl.trim() || undefined,
         sponsorEmail: email.trim(),

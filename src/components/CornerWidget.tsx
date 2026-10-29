@@ -1,7 +1,9 @@
 import React from 'react';
 
+import type { DisplayCurrency } from './BrandMyMacNavbar';
+
 interface CornerWidgetProps {
-  currency: 'EUR' | 'USD';
+  currency: DisplayCurrency;
   onClaimCorner: () => void;
 }
 
@@ -9,7 +11,7 @@ export const CornerWidget: React.FC<CornerWidgetProps> = ({
   currency,
   onClaimCorner
 }) => {
-  const claimPrice = currency === 'EUR' ? '25 €' : '$25';
+  const claimPrice = currency === 'INR' ? '₹6,300' : currency === 'EUR' ? '25 €' : '$25';
 
   return (
     <>

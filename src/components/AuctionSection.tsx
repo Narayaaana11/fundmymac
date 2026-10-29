@@ -3,8 +3,10 @@ import type { BrandSpot } from '../data/fundMyMacData';
 import { BRAND_SPOTS } from '../data/fundMyMacData';
 import { SpotlightCard } from './SpotlightCard';
 
+import type { DisplayCurrency } from './BrandMyMacNavbar';
+
 interface AuctionSectionProps {
-  currency: 'EUR' | 'USD';
+  currency: DisplayCurrency;
   onSpotClick: (spot: BrandSpot) => void;
   spots?: BrandSpot[];
 }
@@ -24,7 +26,11 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
     activeSpots.find((s) => s.id === 3) || BRAND_SPOTS.find((s) => s.id === 3)!  // Top Right
   ];
 
-  const formatPrice = (eur: number, usd: number) => {
+  const formatPrice = (eur: number, usd: number, inr?: number) => {
+    if (currency === 'INR') {
+      const val = inr || Math.round(usd * 84);
+      return `₹${val.toLocaleString('en-IN')}`;
+    }
     return currency === 'EUR' ? `${eur.toLocaleString()} €` : `$${usd.toLocaleString()}`;
   };
 
@@ -57,7 +63,7 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
           Every spot travels with us to conferences, demo days, and founder meetings. Click any spot to secure your placement.
         </p>
         <p className="bmm-auction-pricing-note">
-          Lid spots from {currency === 'EUR' ? '90 €' : '$100'} Small · {currency === 'EUR' ? '160 €' : '$175'} Medium · {currency === 'EUR' ? '230 €' : '$250'} Large · {currency === 'EUR' ? '460 €' : '$500'} Prime Marquee. Palm rest & accessory spots starting at {currency === 'EUR' ? '70 €' : '$75'}.
+          Lid spots from {currency === 'INR' ? '₹8,500' : currency === 'EUR' ? '90 €' : '$100'} Small · {currency === 'INR' ? '₹15,000' : currency === 'EUR' ? '160 €' : '$175'} Medium · {currency === 'INR' ? '₹21,000' : currency === 'EUR' ? '230 €' : '$250'} Large · {currency === 'INR' ? '₹42,000' : currency === 'EUR' ? '460 €' : '$500'} Prime Marquee. Palm rest & accessory spots starting at {currency === 'INR' ? '₹8,000' : currency === 'EUR' ? '70 €' : '$75'}.
         </p>
 
         {/* Featured Prime Positions SpotlightCard */}
@@ -94,11 +100,20 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <span className="bmm-leaderboard-amount">
-                    {formatPrice(spot.topBidEur, spot.topBidUsd)}
+                    {formatPrice(spot.topBidEur, spot.topBidUsd, spot.topBidInr)}
                   </span>
-                  <button type="button" className="bmm-btn-blue" style={{ fontSize: '11px', padding: '4px 10px' }}>
-                    Claim Spot
-                  </button>
+                  {spot.isSold ? (
+                    <span
+                      className="bmm-sold-badge"
+                      style={{ background: 'rgba(255, 69, 58, 0.12)', color: '#ff453a', borderColor: 'rgba(255, 69, 58, 0.3)' }}
+                    >
+                      Claimed
+                    </span>
+                  ) : (
+                    <button type="button" className="bmm-btn-blue" style={{ fontSize: '11px', padding: '4px 10px' }}>
+                      Claim Spot
+                    </button>
+                  )}
                 </div>
               </li>
             ))}
@@ -162,14 +177,23 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
 
                 <div className="bmm-spot-row-right">
                   <span className="bmm-leaderboard-amount">
-                    {formatPrice(spot.topBidEur, spot.topBidUsd)}
+                    {formatPrice(spot.topBidEur, spot.topBidUsd, spot.topBidInr)}
                   </span>
-                  <span
-                    className="bmm-sold-badge"
-                    style={{ background: 'rgba(52, 199, 89, 0.12)', color: '#27ae60', borderColor: 'rgba(52, 199, 89, 0.3)' }}
-                  >
-                    Available
-                  </span>
+                  {spot.isSold ? (
+                    <span
+                      className="bmm-sold-badge"
+                      style={{ background: 'rgba(255, 69, 58, 0.12)', color: '#ff453a', borderColor: 'rgba(255, 69, 58, 0.3)' }}
+                    >
+                      Claimed
+                    </span>
+                  ) : (
+                    <span
+                      className="bmm-sold-badge"
+                      style={{ background: 'rgba(52, 199, 89, 0.12)', color: '#27ae60', borderColor: 'rgba(52, 199, 89, 0.3)' }}
+                    >
+                      Available
+                    </span>
+                  )}
                 </div>
               </div>
             ))}

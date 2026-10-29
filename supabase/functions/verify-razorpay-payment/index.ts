@@ -38,6 +38,58 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // 1. GET: Query Verified Order Status
+    if (req.method === 'GET') {
+      const url = new URL(req.url);
+      const sessionId = url.searchParams.get('session_id') || url.searchParams.get('order_id');
+      if (!sessionId) {
+        return new Response(JSON.stringify({ error: 'session_id or order_id query param is required' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      const { data: order } = await supabaseClient
+        .from('sponsorship_orders')
+        .select('id, order_type, spot_id, amount_cents, currency, status, sponsor_name, sponsor_url, logo_url')
+        .or(`provider_order_id.eq.${sessionId},provider_session_id.eq.${sessionId}`)
+        .maybeSingle();
+
+      if (order) {
+        return new Response(JSON.stringify({
+          found: true,
+          paid: order.status === 'paid',
+          order: {
+            id: order.id,
+            orderType: order.order_type,
+            spotId: order.spot_id,
+            amountCents: order.amount_cents,
+            amountMinor: order.amount_cents,
+            currency: order.currency,
+            sponsorName: order.sponsor_name,
+            sponsorUrl: order.sponsor_url,
+            logoUrl: order.logo_url
+          }
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      return new Response(JSON.stringify({ found: false, paid: false }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (req.method !== 'POST') {
+      return new Response(JSON.stringify({ success: false, error: 'Method Not Allowed' }), {
+        status: 405,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // 2. POST: Verify Razorpay Checkout Signature
     const razorpayKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
     const { razorpayPaymentId, razorpayOrderId, razorpaySignature } = await req.json();
 

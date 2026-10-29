@@ -4,6 +4,8 @@ import { SPONSOR_TIERS } from '../data/fundMyMacData';
 import { SpotlightCard } from './SpotlightCard';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
+import type { DisplayCurrency } from './BrandMyMacNavbar';
+
 interface ConfirmedSponsor {
   order_id: string;
   sponsor_name: string;
@@ -16,7 +18,7 @@ interface ConfirmedSponsor {
 }
 
 interface SponsorsWallProps {
-  currency: 'EUR' | 'USD';
+  currency: DisplayCurrency;
   onSelectTier: (tier: SponsorTier) => void;
   onOpenCustomDonation: () => void;
 }
@@ -42,13 +44,16 @@ export const SponsorsWall: React.FC<SponsorsWallProps> = ({
   }, []);
 
   const foundingSlots = [
-    { id: 1, title: 'Marquee Title Partner', priceUsd: 500, priceEur: 460, spot: 'Above Apple Logo · Highest IRL Visibility' },
-    { id: 2, title: 'Lid Prime Partner', priceUsd: 250, priceEur: 230, spot: 'MacBook Pro Aluminum Lid · Demo Days' },
-    { id: 3, title: 'Accessory / Charger Partner', priceUsd: 150, priceEur: 138, spot: '140W GaN Apple Fast Charger Body' },
-    { id: 4, title: 'The Corner Sponsor', priceUsd: 75, priceEur: 69, spot: 'Sticky Top Left Widget Banner' }
+    { id: 1, title: 'Marquee Title Partner', priceUsd: 500, priceEur: 460, priceInr: 42000, spot: 'Above Apple Logo · Highest IRL Visibility' },
+    { id: 2, title: 'Lid Prime Partner', priceUsd: 250, priceEur: 230, priceInr: 21000, spot: 'MacBook Pro Aluminum Lid · Demo Days' },
+    { id: 3, title: 'Accessory / Charger Partner', priceUsd: 150, priceEur: 138, priceInr: 12500, spot: '140W GaN Apple Fast Charger Body' },
+    { id: 4, title: 'The Corner Sponsor', priceUsd: 75, priceEur: 69, priceInr: 6300, spot: 'Sticky Top Left Widget Banner' }
   ];
 
   const formatPrice = (tier: SponsorTier) => {
+    if (currency === 'INR') {
+      return `₹${(tier.priceInr || Math.round(tier.priceUsd * 84)).toLocaleString('en-IN')}`;
+    }
     return currency === 'EUR' ? `${tier.priceEur} €` : `$${tier.priceUsd}`;
   };
 
@@ -137,7 +142,7 @@ export const SponsorsWall: React.FC<SponsorsWallProps> = ({
                 {slot.spot}
               </p>
               <strong style={{ fontSize: '15px', color: 'var(--blue)' }}>
-                {currency === 'EUR' ? `${slot.priceEur} €` : `$${slot.priceUsd}`}
+                {currency === 'INR' ? `₹${slot.priceInr.toLocaleString('en-IN')}` : currency === 'EUR' ? `${slot.priceEur} €` : `$${slot.priceUsd}`}
               </strong>
               <span className="sponsor-visit-link" style={{ marginTop: '8px' }}>
                 Claim This Slot ›

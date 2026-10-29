@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import type { SponsorTier } from '../data/fundMyMacData';
 import { initiateCheckoutSession, loadRazorpayScript, verifyRazorpayPayment } from '../lib/checkoutApi';
 
+import type { DisplayCurrency } from './BrandMyMacNavbar';
+
 interface DonationModalProps {
   isOpen: boolean;
   selectedTier: SponsorTier | null;
-  currency: 'EUR' | 'USD';
+  currency: DisplayCurrency;
   onClose: () => void;
   onConfirmDonation?: (amountUsd: number, amountEur: number, sponsorName: string, sponsorUrl: string) => void;
 }
@@ -24,7 +26,7 @@ export const DonationModal: React.FC<DonationModalProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const effectiveAmount = selectedTier
-    ? (currency === 'EUR' ? selectedTier.priceEur : selectedTier.priceUsd)
+    ? (currency === 'INR' ? (selectedTier.priceInr || Math.round(selectedTier.priceUsd * 84)) : currency === 'EUR' ? selectedTier.priceEur : selectedTier.priceUsd)
     : customAmount;
 
   useEffect(() => {
@@ -37,7 +39,7 @@ export const DonationModal: React.FC<DonationModalProps> = ({
 
   if (!isOpen) return null;
 
-  const currencySymbol = currency === 'EUR' ? '€' : '$';
+  const currencySymbol = currency === 'INR' ? '₹' : currency === 'EUR' ? '€' : '$';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,8 +55,9 @@ export const DonationModal: React.FC<DonationModalProps> = ({
       return;
     }
 
-    if (!selectedTier && customAmount < 5) {
-      setErrorMessage('Minimum contribution is 5 ' + currencySymbol);
+    const minAmount = currency === 'INR' ? 500 : 5;
+    if (!selectedTier && (customAmount < 5 || customAmount < minAmount)) {
+      setErrorMessage(`Minimum contribution is 5 ${currencySymbol}${currency === 'INR' ? ' (₹500 for INR)' : ''}`);
       return;
     }
 
@@ -66,7 +69,7 @@ export const DonationModal: React.FC<DonationModalProps> = ({
         tierId: selectedTier?.id,
         customAmountMinor: selectedTier ? undefined : customAmount * 100,
         customAmountCents: selectedTier ? undefined : customAmount * 100,
-        currency: currency.toLowerCase() as 'usd' | 'eur',
+        currency: currency.toLowerCase() as 'inr' | 'usd' | 'eur',
         sponsorName: sponsorName.trim(),
         sponsorEmail: sponsorEmail.trim(),
         sponsorUrl: sponsorUrl.trim() || undefined

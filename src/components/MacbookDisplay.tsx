@@ -2,8 +2,10 @@ import React, { useState, useRef } from 'react';
 import type { BrandSpot } from '../data/fundMyMacData';
 import { BRAND_SPOTS } from '../data/fundMyMacData';
 
+import type { DisplayCurrency } from './BrandMyMacNavbar';
+
 interface MacbookDisplayProps {
-  currency: 'EUR' | 'USD';
+  currency: DisplayCurrency;
   onSpotClick: (spot: BrandSpot) => void;
   spots?: BrandSpot[];
 }

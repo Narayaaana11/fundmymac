@@ -3,7 +3,7 @@ import './App.css';
 import type { BrandSpot, SponsorTier } from './data/fundMyMacData';
 import { FUNDING_GOAL, BRAND_SPOTS } from './data/fundMyMacData';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
-import { BrandMyMacNavbar } from './components/BrandMyMacNavbar';
+import { BrandMyMacNavbar, type DisplayCurrency } from './components/BrandMyMacNavbar';
 import { CornerWidget } from './components/CornerWidget';
 import { MacbookDisplay } from './components/MacbookDisplay';
 import { VesperMission } from './components/VesperMission';
@@ -21,7 +21,7 @@ import { LiveActivityTicker } from './components/LiveActivityTicker';
 import { RealtimeMetricsRow } from './components/RealtimeMetricsRow';
 
 export const App: React.FC = () => {
-  const [currency, setCurrency] = useState<'EUR' | 'USD'>('USD');
+  const [currency, setCurrency] = useState<DisplayCurrency>('USD');
   const [selectedSpot, setSelectedSpot] = useState<BrandSpot | null>(null);
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
   const [selectedTier, setSelectedTier] = useState<SponsorTier | null>(null);
@@ -44,6 +44,7 @@ export const App: React.FC = () => {
   // Canonical verified financial progress from captured transactions
   const [raisedUsd, setRaisedUsd] = useState<number>(FUNDING_GOAL.raisedUsd);
   const [raisedEur, setRaisedEur] = useState<number>(FUNDING_GOAL.raisedEur);
+  const [raisedInr, setRaisedInr] = useState<number>(FUNDING_GOAL.raisedInr || 0);
 
   const clearCheckoutUrlParams = useCallback(() => {
     if (typeof window !== 'undefined' && window.history.replaceState) {
@@ -79,7 +80,8 @@ export const App: React.FC = () => {
               sponsorUrl: dbSpot.sponsor_url || s.sponsorUrl,
               logoUrl: dbSpot.logo_url || s.logoUrl,
               topBidUsd: dbSpot.price_usd_cents ? Math.round(dbSpot.price_usd_cents / 100) : (dbSpot.top_bid_usd || s.topBidUsd),
-              topBidEur: dbSpot.price_eur_cents ? Math.round(dbSpot.price_eur_cents / 100) : (dbSpot.top_bid_eur || s.topBidEur)
+              topBidEur: dbSpot.price_eur_cents ? Math.round(dbSpot.price_eur_cents / 100) : (dbSpot.top_bid_eur || s.topBidEur),
+              topBidInr: dbSpot.price_inr_paise ? Math.round(dbSpot.price_inr_paise / 100) : (dbSpot.top_bid_inr || s.topBidInr)
             };
           })
         );
@@ -88,7 +90,7 @@ export const App: React.FC = () => {
     // 2. Fetch canonical financial totals strictly from site_stats
     client
       .from('site_stats')
-      .select('total_raised_usd_cents, total_raised_eur_cents')
+      .select('total_raised_usd_cents, total_raised_eur_cents, total_raised_inr_paise')
       .eq('id', 1)
       .maybeSingle()
       .then(({ data, error }) => {
@@ -98,6 +100,9 @@ export const App: React.FC = () => {
         }
         if (typeof data.total_raised_eur_cents === 'number') {
           setRaisedEur(Math.round(data.total_raised_eur_cents / 100));
+        }
+        if (typeof data.total_raised_inr_paise === 'number') {
+          setRaisedInr(Math.round(data.total_raised_inr_paise / 100));
         }
       });
   }, []);
@@ -123,6 +128,7 @@ export const App: React.FC = () => {
           logo_url?: string;
           price_usd_cents?: number;
           price_eur_cents?: number;
+          price_inr_paise?: number;
         };
         if (newRecord && typeof newRecord.id === 'number') {
           setSpots((prev) =>
@@ -135,7 +141,8 @@ export const App: React.FC = () => {
                     sponsorUrl: newRecord.sponsor_url || s.sponsorUrl,
                     logoUrl: newRecord.logo_url || s.logoUrl,
                     topBidUsd: newRecord.price_usd_cents ? Math.round(newRecord.price_usd_cents / 100) : s.topBidUsd,
-                    topBidEur: newRecord.price_eur_cents ? Math.round(newRecord.price_eur_cents / 100) : s.topBidEur
+                    topBidEur: newRecord.price_eur_cents ? Math.round(newRecord.price_eur_cents / 100) : s.topBidEur,
+                    topBidInr: newRecord.price_inr_paise ? Math.round(newRecord.price_inr_paise / 100) : s.topBidInr
                   }
                 : s
             )
@@ -147,6 +154,7 @@ export const App: React.FC = () => {
         const newStats = payload.new as {
           total_raised_usd_cents?: number;
           total_raised_eur_cents?: number;
+          total_raised_inr_paise?: number;
         };
         if (newStats) {
           if (typeof newStats.total_raised_usd_cents === 'number') {
@@ -154,6 +162,9 @@ export const App: React.FC = () => {
           }
           if (typeof newStats.total_raised_eur_cents === 'number') {
             setRaisedEur(Math.round(newStats.total_raised_eur_cents / 100));
+          }
+          if (typeof newStats.total_raised_inr_paise === 'number') {
+            setRaisedInr(Math.round(newStats.total_raised_inr_paise / 100));
           }
         }
       })
@@ -165,12 +176,16 @@ export const App: React.FC = () => {
     };
   }, [refreshCanonicalData]);
 
-  const totalRaised = currency === 'EUR'
+  const totalRaised = currency === 'INR'
+    ? `₹${raisedInr.toLocaleString('en-IN')}`
+    : currency === 'EUR'
     ? `${raisedEur.toLocaleString()} €`
     : `$${raisedUsd.toLocaleString()}`;
 
   const percentProgress = Math.round(
-    (raisedUsd / FUNDING_GOAL.targetUsd) * 100
+    currency === 'INR'
+      ? (raisedInr / FUNDING_GOAL.targetInr) * 100
+      : (raisedUsd / FUNDING_GOAL.targetUsd) * 100
   );
 
   const handleSpotClick = (spot: BrandSpot) => {

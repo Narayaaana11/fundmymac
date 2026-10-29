@@ -72,6 +72,52 @@ export function loadRazorpayScript(): Promise<boolean> {
   });
 }
 
+const SUPABASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || '';
+const SUPABASE_ANON_KEY = (typeof import.meta !== 'undefined' && (import.meta.env?.VITE_SUPABASE_ANON_KEY || import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY)) || '';
+const BACKEND_API_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_BACKEND_API_URL) || '';
+
+export interface ApiConfig {
+  createOrderUrl: string;
+  verifyPaymentUrl: string;
+  verifySessionUrl: (sessionId: string) => string;
+  headers: Record<string, string>;
+}
+
+/**
+ * Resolves API endpoints:
+ * - In production static hosting: routes directly to Supabase Edge Functions with anon key auth.
+ * - In local development / Node servers: routes to local middleware (/api/checkout/...).
+ */
+export function getApiConfig(): ApiConfig {
+  const isProd = typeof import.meta !== 'undefined' && import.meta.env?.PROD;
+  const forceEdge = typeof import.meta !== 'undefined' && import.meta.env?.VITE_USE_EDGE_FUNCTIONS === 'true';
+  const useEdgeFunctions = (isProd && !BACKEND_API_URL && !!SUPABASE_URL) || forceEdge;
+
+  if (useEdgeFunctions) {
+    const edgeBase = `${SUPABASE_URL.replace(/\/$/, '')}/functions/v1`;
+    return {
+      createOrderUrl: `${edgeBase}/create-razorpay-order`,
+      verifyPaymentUrl: `${edgeBase}/verify-razorpay-payment`,
+      verifySessionUrl: (sessionId: string) => `${edgeBase}/verify-razorpay-payment?session_id=${encodeURIComponent(sessionId)}`,
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    };
+  }
+
+  const base = BACKEND_API_URL ? BACKEND_API_URL.replace(/\/$/, '') : '';
+  return {
+    createOrderUrl: `${base}/api/checkout/create-order`,
+    verifyPaymentUrl: `${base}/api/checkout/verify-payment`,
+    verifySessionUrl: (sessionId: string) => `${base}/api/checkout/verify-session?session_id=${encodeURIComponent(sessionId)}`,
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+}
+
 /**
  * Initiates Razorpay Order creation on backend.
  */
@@ -88,12 +134,12 @@ export async function initiateCheckoutSession(
     cancelUrl
   };
 
+  const config = getApiConfig();
+
   try {
-    const response = await fetch('/api/checkout/create-order', {
+    const response = await fetch(config.createOrderUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: config.headers,
       body: JSON.stringify(payload)
     });
 
@@ -112,12 +158,12 @@ export async function initiateCheckoutSession(
  * Sends client checkout response to backend for HMAC-SHA256 signature verification.
  */
 export async function verifyRazorpayPayment(params: VerifyPaymentParams): Promise<VerifyPaymentResult> {
+  const config = getApiConfig();
+
   try {
-    const response = await fetch('/api/checkout/verify-payment', {
+    const response = await fetch(config.verifyPaymentUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: config.headers,
       body: JSON.stringify(params)
     });
 
@@ -151,8 +197,12 @@ export async function verifyCheckoutSession(sessionId: string): Promise<{
   };
   error?: string;
 }> {
+  const config = getApiConfig();
+
   try {
-    const response = await fetch(`/api/checkout/verify-session?session_id=${encodeURIComponent(sessionId)}`);
+    const response = await fetch(config.verifySessionUrl(sessionId), {
+      headers: config.headers
+    });
     if (!response.ok) {
       return { paid: false, error: `Verification returned status ${response.status}` };
     }

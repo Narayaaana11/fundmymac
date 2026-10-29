@@ -66,4 +66,16 @@ describe('Database Security & Row-Level Security (RLS) Policies', () => {
     assert.match(rzpSqlContent, /REVOKE EXECUTE ON FUNCTION public\.confirm_paid_order\(TEXT, TEXT, TEXT, INT, TEXT, JSONB\) FROM PUBLIC, anon;/, 'confirm_paid_order revoked from anon');
     assert.match(rzpSqlContent, /GRANT EXECUTE ON FUNCTION public\.confirm_paid_order\(TEXT, TEXT, TEXT, INT, TEXT, JSONB\) TO service_role;/, 'confirm_paid_order granted to service_role');
   });
+
+  const hardeningMigrationPath = resolve('supabase/migrations/20261029_production_readiness_hardening.sql');
+  test('Production hardening migration implements refund workflow and sweep', () => {
+    assert.ok(existsSync(hardeningMigrationPath), 'Production hardening migration exists');
+    const hardeningContent = readFileSync(hardeningMigrationPath, 'utf8');
+
+    assert.match(hardeningContent, /'refunded'/, 'Status check constraint includes refunded');
+    assert.match(hardeningContent, /CREATE OR REPLACE FUNCTION public\.process_order_refund/, 'process_order_refund procedure implemented');
+    assert.match(hardeningContent, /CREATE OR REPLACE FUNCTION public\.reconcile_unclaimed_payment/, 'reconcile_unclaimed_payment procedure implemented');
+    assert.match(hardeningContent, /REVOKE EXECUTE ON FUNCTION public\.process_order_refund\(UUID, TEXT, TEXT\) FROM PUBLIC, anon;/, 'Refund procedure execution revoked from public/anon');
+    assert.match(hardeningContent, /GRANT EXECUTE ON FUNCTION public\.process_order_refund\(UUID, TEXT, TEXT\) TO service_role;/, 'Refund procedure granted exclusively to service_role');
+  });
 });

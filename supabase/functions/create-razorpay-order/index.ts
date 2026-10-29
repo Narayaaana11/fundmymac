@@ -47,6 +47,22 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ success: false, error: 'Method Not Allowed' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  // Request size limit: 2.5MB maximum
+  const contentLength = req.headers.get('content-length');
+  if (contentLength && parseInt(contentLength, 10) > 2.5 * 1024 * 1024) {
+    return new Response(JSON.stringify({ success: false, error: 'Payload exceeds 2.5MB limit' }), {
+      status: 413,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
   try {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -55,6 +71,18 @@ serve(async (req) => {
 
     const razorpayKeyId = Deno.env.get('RAZORPAY_KEY_ID');
     const razorpayKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
+    const isProduction = Deno.env.get('ENVIRONMENT') === 'production' || Deno.env.get('NODE_ENV') === 'production';
+
+    if (isProduction && (!razorpayKeyId || !razorpayKeySecret)) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Production payment configuration missing: Live Razorpay merchant credentials required.'
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     const body = await req.json();
 
     const {

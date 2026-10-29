@@ -4,7 +4,7 @@
 
 export type OrderType = 'spot_sponsorship' | 'tier_sponsorship' | 'custom_donation';
 export type CurrencyCode = 'inr' | 'usd' | 'eur';
-export type OrderStatus = 'pending' | 'reserved' | 'paid' | 'failed' | 'cancelled' | 'expired';
+export type OrderStatus = 'pending' | 'reserved' | 'paid' | 'failed' | 'cancelled' | 'expired' | 'refunded';
 
 export interface CreateCheckoutSessionParams {
   orderType: OrderType;

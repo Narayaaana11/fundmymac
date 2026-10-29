@@ -236,7 +236,17 @@ export class RazorpayPaymentAdapter {
         }
       }
 
-      // 7. Test / Sandbox Mode Fallback
+      // 7. Test / Sandbox Mode Fallback (Forbidden in Production)
+      if (process.env.NODE_ENV === 'production' && !hasLiveKeys) {
+        if (params.orderType === 'spot_sponsorship' && params.spotId) {
+          await this.releaseSpot(params.spotId, internalOrderId);
+        }
+        return {
+          success: false,
+          error: 'Production payment configuration missing: Live Razorpay merchant credentials required.'
+        };
+      }
+
       const testRazorpayOrderId = `order_test_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
 
       await this.recordPendingOrder({
@@ -775,6 +785,47 @@ export class RazorpayPaymentAdapter {
     }
 
     return { found: false, paid: false };
+  }
+
+  /**
+   * Processes an order refund, releases inventory spot, and updates campaign totals atomically.
+   */
+  async processOrderRefund(orderId: string, reason: string, refundRef?: string): Promise<{
+    success: boolean;
+    orderId?: string;
+    spotId?: number | null;
+    status?: string;
+    error?: string;
+  }> {
+    if (this.supabase) {
+      const { data, error } = await this.supabase.rpc('process_order_refund', {
+        p_order_id: orderId,
+        p_refund_reason: reason,
+        p_refund_provider_reference: refundRef || null
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return data as { success: boolean; orderId?: string; spotId?: number | null; status?: string; error?: string };
+    }
+
+    // In-memory simulation
+    const order = Array.from(this.localTestOrders.values()).find(o => o.id === orderId || o.razorpayOrderId === orderId);
+    if (!order) {
+      return { success: false, error: 'Order not found' };
+    }
+    if (order.status !== 'paid') {
+      return { success: false, error: `Only confirmed paid orders can be refunded. Current status: ${order.status}` };
+    }
+
+    order.status = 'refunded';
+    if (order.spotId) {
+      this.localTestSpots.set(order.spotId, { status: 'available' });
+    }
+
+    return { success: true, orderId: order.id, spotId: order.spotId, status: 'refunded' };
   }
 }
 
