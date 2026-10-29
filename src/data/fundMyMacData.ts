@@ -559,6 +559,6 @@ export const FAQ_DATA = [
   },
   {
     question: 'What payment methods do you support?',
-    answer: 'We support instant Stripe Checkout (Credit/Debit Cards, Apple Pay, Google Pay), PayPal, UPI, and Crypto (ETH / Solana / USDC).'
+    answer: 'We support instant Razorpay Checkout (UPI, Credit/Debit Cards, NetBanking, Wallets), and direct Backer pledges.'
   }
 ];

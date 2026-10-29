@@ -1,7 +1,7 @@
 -- =========================================================================
 -- Fund My Mac / Brand My Mac Realtime Database Schema (Supabase SQL Editor)
 -- Copy and run this in: https://supabase.com/dashboard/project/lavydeusonwqjrlhtqzv/sql/new
--- Production Hardened: RLS Secured, Atomic Reservation, Webhook Idempotency
+-- Production Hardened: RLS Secured, Atomic Reservation, Razorpay Webhook Idempotency
 -- =========================================================================
 
 -- Enable pgcrypto for UUID generation if not enabled
@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS public.site_stats (
     views BIGINT NOT NULL DEFAULT 0,
     x_views_milestone BIGINT NOT NULL DEFAULT 0,
     spots_sold INT NOT NULL DEFAULT 0,
+    total_raised_inr_paise BIGINT NOT NULL DEFAULT 0,
     total_raised_usd_cents BIGINT NOT NULL DEFAULT 0,
     total_raised_eur_cents BIGINT NOT NULL DEFAULT 0,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -20,8 +21,8 @@ CREATE TABLE IF NOT EXISTS public.site_stats (
 );
 
 -- Initialize site_stats row if not present
-INSERT INTO public.site_stats (id, views, x_views_milestone, spots_sold, total_raised_usd_cents, total_raised_eur_cents)
-VALUES (1, 0, 0, 0, 0, 0)
+INSERT INTO public.site_stats (id, views, x_views_milestone, spots_sold, total_raised_inr_paise, total_raised_usd_cents, total_raised_eur_cents)
+VALUES (1, 0, 0, 0, 0, 0, 0)
 ON CONFLICT (id) DO NOTHING;
 
 -- 2. Create or Upgrade brand_spots (Inventory)
@@ -34,6 +35,7 @@ CREATE TABLE IF NOT EXISTS public.brand_spots (
     size TEXT NOT NULL DEFAULT 'Medium',         -- 'Small' | 'Medium' | 'Large'
     dimensions TEXT NOT NULL DEFAULT '',
     location TEXT NOT NULL DEFAULT '',
+    price_inr_paise INT NOT NULL DEFAULT 850000,
     price_usd_cents INT NOT NULL DEFAULT 10000,
     price_eur_cents INT NOT NULL DEFAULT 9000,
     status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available', 'reserved', 'sold')),
@@ -50,28 +52,28 @@ CREATE TABLE IF NOT EXISTS public.brand_spots (
 );
 
 -- Seed canonical 20 spots if not already present
-INSERT INTO public.brand_spots (id, name, category, view_type, surface, size, dimensions, location, price_usd_cents, price_eur_cents)
+INSERT INTO public.brand_spots (id, name, category, view_type, surface, size, dimensions, location, price_inr_paise, price_usd_cents, price_eur_cents)
 VALUES
-(1, 'Spot #1 (Top-Left Banner)', 'standard', 'lid', 'lid', 'Large', '9.5 × 5.5 cm', 'Top left exterior lid', 25000, 23000),
-(2, 'Spot #2 (Marquee — Above Apple Logo)', 'marquee', 'lid', 'lid', 'Large', '9.5 × 5.5 cm', 'Prime center position above Apple logo', 50000, 46000),
-(3, 'Spot #3 (Top-Right Banner)', 'standard', 'lid', 'lid', 'Large', '9.5 × 5.5 cm', 'Top right exterior lid', 25000, 23000),
-(4, 'Spot #4 (Upper Left Mini-Strip)', 'standard', 'lid', 'lid', 'Small', '4.75 × 3 cm', 'Upper left corner', 10000, 9000),
-(5, 'Spot #5 (Upper Right Mini-Strip)', 'standard', 'lid', 'lid', 'Small', '4.75 × 3 cm', 'Upper right corner', 10000, 9000),
-(6, 'Spot #6 (Mid Left Flank)', 'standard', 'lid', 'lid', 'Medium', '6.5 × 4 cm', 'Mid-level left side', 17500, 16000),
-(7, 'Spot #7 (Mid Right Flank)', 'standard', 'lid', 'lid', 'Medium', '6.5 × 4 cm', 'Mid-level right side', 17500, 16000),
-(8, 'Spot #8 (Apple Left Adjacent)', 'apple_adjacent', 'lid', 'lid', 'Small', '4.75 × 3 cm', 'Immediately left of Apple logo', 15000, 13800),
-(9, 'Spot #9 (Apple Right Adjacent)', 'apple_adjacent', 'lid', 'lid', 'Small', '4.75 × 3 cm', 'Immediately right of Apple logo', 15000, 13800),
-(10, 'Spot #10 (Lower Deck Center)', 'standard', 'lid', 'lid', 'Large', '9.5 × 4.5 cm', 'Center bottom beneath Apple logo', 22500, 21000),
-(11, 'Spot #11 (Left Palm Outer Top)', 'inside_standard', 'inside', 'inside', 'Medium', '5.5 × 3.5 cm', 'Left Palm Rest — Outer Top', 10000, 9000),
-(12, 'Spot #12 (Left Palm Outer Bottom)', 'inside_standard', 'inside', 'inside', 'Medium', '5.5 × 3.5 cm', 'Left Palm Rest — Outer Bottom', 10000, 9000),
-(13, 'Spot #13 (Left Palm Inner Top)', 'inside_standard', 'inside', 'inside', 'Medium', '5.5 × 3.5 cm', 'Left Palm Rest — Inner Top', 10000, 9000),
-(14, 'Spot #14 (Left Palm Inner Bottom)', 'inside_standard', 'inside', 'inside', 'Medium', '5.5 × 3.5 cm', 'Left Palm Rest — Inner Bottom', 10000, 9000),
-(15, 'Spot #15 (Right Palm Inner Top)', 'inside_standard', 'inside', 'inside', 'Medium', '5.5 × 3.5 cm', 'Right Palm Rest — Inner Top', 10000, 9000),
-(16, 'Spot #16 (Right Palm Inner Bottom)', 'inside_standard', 'inside', 'inside', 'Medium', '5.5 × 3.5 cm', 'Right Palm Rest — Inner Bottom', 10000, 9000),
-(17, 'Spot #17 (Right Palm Outer Top)', 'inside_standard', 'inside', 'inside', 'Medium', '5.5 × 3.5 cm', 'Right Palm Rest — Outer Top', 10000, 9000),
-(18, 'Spot #18 (Right Palm Outer Bottom)', 'inside_standard', 'inside', 'inside', 'Medium', '5.5 × 3.5 cm', 'Right Palm Rest — Outer Bottom', 10000, 9000),
-(19, 'Spot #19 (140W Fast Charger Body)', 'accessory', 'accessory', 'accessory', 'Large', '7 × 7 cm', 'Apple 140W GaN Fast Power Adapter Body', 15000, 13800),
-(20, 'Spot #20 (Magic Mouse Curved Top)', 'accessory', 'accessory', 'accessory', 'Medium', '5.5 × 3.5 cm', 'Apple Magic Mouse Curved Top Shell', 9900, 9000)
+(1, 'Spot #1 (Top-Left Banner)', 'standard', 'lid', 'lid', 'Large', '9.5 × 5.5 cm', 'Top left exterior lid', 2100000, 25000, 23000),
+(2, 'Spot #2 (Marquee — Above Apple Logo)', 'marquee', 'lid', 'lid', 'Large', '9.5 × 5.5 cm', 'Prime center position above Apple logo', 4200000, 50000, 46000),
+(3, 'Spot #3 (Top-Right Banner)', 'standard', 'lid', 'lid', 'Large', '9.5 × 5.5 cm', 'Top right exterior lid', 2100000, 25000, 23000),
+(4, 'Spot #4 (Upper Left Mini-Strip)', 'standard', 'lid', 'lid', 'Small', '4.75 × 3 cm', 'Upper left corner', 850000, 10000, 9000),
+(5, 'Spot #5 (Upper Right Mini-Strip)', 'standard', 'lid', 'lid', 'Small', '4.75 × 3 cm', 'Upper right corner', 850000, 10000, 9000),
+(6, 'Spot #6 (Mid Left Flank)', 'standard', 'lid', 'lid', 'Medium', '6.5 × 4 cm', 'Mid-level left side', 1500000, 17500, 16000),
+(7, 'Spot #7 (Mid Right Flank)', 'standard', 'lid', 'lid', 'Medium', '6.5 × 4 cm', 'Mid-level right side', 1500000, 17500, 16000),
+(8, 'Spot #8 (Apple Left Adjacent)', 'apple_adjacent', 'lid', 'lid', 'Small', '4.75 × 3 cm', 'Immediately left of Apple logo', 1250000, 15000, 13800),
+(9, 'Spot #9 (Apple Right Adjacent)', 'apple_adjacent', 'lid', 'lid', 'Small', '4.75 × 3 cm', 'Immediately right of Apple logo', 1250000, 15000, 13800),
+(10, 'Spot #10 (Lower Deck Center)', 'standard', 'lid', 'lid', 'Large', '9.5 × 4.5 cm', 'Center bottom beneath Apple logo', 1900000, 22500, 21000),
+(11, 'Spot #11 (Left Palm Outer Top)', 'inside_standard', 'inside', 'inside', 'Medium', '5.5 × 3.5 cm', 'Left Palm Rest — Outer Top', 850000, 10000, 9000),
+(12, 'Spot #12 (Left Palm Outer Bottom)', 'inside_standard', 'inside', 'inside', 'Medium', '5.5 × 3.5 cm', 'Left Palm Rest — Outer Bottom', 850000, 10000, 9000),
+(13, 'Spot #13 (Left Palm Inner Top)', 'inside_standard', 'inside', 'inside', 'Medium', '5.5 × 3.5 cm', 'Left Palm Rest — Inner Top', 850000, 10000, 9000),
+(14, 'Spot #14 (Left Palm Inner Bottom)', 'inside_standard', 'inside', 'inside', 'Medium', '5.5 × 3.5 cm', 'Left Palm Rest — Inner Bottom', 850000, 10000, 9000),
+(15, 'Spot #15 (Right Palm Inner Top)', 'inside_standard', 'inside', 'inside', 'Medium', '5.5 × 3.5 cm', 'Right Palm Rest — Inner Top', 850000, 10000, 9000),
+(16, 'Spot #16 (Right Palm Inner Bottom)', 'inside_standard', 'inside', 'inside', 'Medium', '5.5 × 3.5 cm', 'Right Palm Rest — Inner Bottom', 850000, 10000, 9000),
+(17, 'Spot #17 (Right Palm Outer Top)', 'inside_standard', 'inside', 'inside', 'Medium', '5.5 × 3.5 cm', 'Right Palm Rest — Outer Top', 850000, 10000, 9000),
+(18, 'Spot #18 (Right Palm Outer Bottom)', 'inside_standard', 'inside', 'inside', 'Medium', '5.5 × 3.5 cm', 'Right Palm Rest — Outer Bottom', 850000, 10000, 9000),
+(19, 'Spot #19 (140W Fast Charger Body)', 'accessory', 'accessory', 'accessory', 'Large', '7 × 7 cm', 'Apple 140W GaN Fast Power Adapter Body', 1250000, 15000, 13800),
+(20, 'Spot #20 (Magic Mouse Curved Top)', 'accessory', 'accessory', 'accessory', 'Medium', '5.5 × 3.5 cm', 'Apple Magic Mouse Curved Top Shell', 800000, 9900, 9000)
 ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
     category = EXCLUDED.category,
@@ -80,6 +82,7 @@ ON CONFLICT (id) DO UPDATE SET
     size = EXCLUDED.size,
     dimensions = EXCLUDED.dimensions,
     location = EXCLUDED.location,
+    price_inr_paise = EXCLUDED.price_inr_paise,
     price_usd_cents = EXCLUDED.price_usd_cents,
     price_eur_cents = EXCLUDED.price_eur_cents;
 
@@ -90,15 +93,18 @@ CREATE TABLE IF NOT EXISTS public.sponsorship_orders (
     spot_id INT REFERENCES public.brand_spots(id),
     tier_id TEXT,
     amount_cents INT NOT NULL CHECK (amount_cents > 0),
-    currency TEXT NOT NULL CHECK (currency IN ('usd', 'eur')),
+    currency TEXT NOT NULL CHECK (currency IN ('inr', 'usd', 'eur')),
     status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'reserved', 'paid', 'failed', 'cancelled', 'expired')),
     sponsor_name TEXT NOT NULL,
     sponsor_url TEXT,
     sponsor_email TEXT NOT NULL,
     logo_url TEXT,
-    payment_provider TEXT NOT NULL DEFAULT 'stripe',
+    payment_provider TEXT NOT NULL DEFAULT 'razorpay',
+    provider_order_id TEXT UNIQUE,
     provider_session_id TEXT UNIQUE,
+    provider_payment_id TEXT,
     provider_payment_intent_id TEXT,
+    provider_signature TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     paid_at TIMESTAMPTZ
@@ -108,7 +114,7 @@ CREATE TABLE IF NOT EXISTS public.sponsorship_orders (
 CREATE TABLE IF NOT EXISTS public.payment_transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     order_id UUID NOT NULL REFERENCES public.sponsorship_orders(id) ON DELETE RESTRICT,
-    provider TEXT NOT NULL DEFAULT 'stripe',
+    provider TEXT NOT NULL DEFAULT 'razorpay',
     provider_event_id TEXT NOT NULL UNIQUE, -- Prevents duplicate webhook execution!
     event_type TEXT NOT NULL,
     amount_cents INT NOT NULL,
@@ -178,6 +184,7 @@ CREATE OR REPLACE FUNCTION public.atomic_reserve_spot(
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
     v_spot RECORD;
@@ -230,6 +237,7 @@ CREATE OR REPLACE FUNCTION public.release_expired_reservations()
 RETURNS INT
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
     v_released_count INT;
@@ -259,11 +267,13 @@ CREATE OR REPLACE FUNCTION public.confirm_paid_order(
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
     v_order RECORD;
     v_now TIMESTAMPTZ := NOW();
     v_spots_sold INT;
+    v_total_inr BIGINT;
     v_total_usd BIGINT;
     v_total_eur BIGINT;
 BEGIN
@@ -275,11 +285,12 @@ BEGIN
     -- Lookup order
     SELECT * INTO v_order
     FROM public.sponsorship_orders
-    WHERE provider_session_id = p_provider_session_id
+    WHERE provider_order_id = p_provider_session_id 
+       OR provider_session_id = p_provider_session_id
     FOR UPDATE;
 
     IF NOT FOUND THEN
-        RETURN jsonb_build_object('success', false, 'error', 'Order not found for provider session');
+        RETURN jsonb_build_object('success', false, 'error', 'Order not found for provider reference');
     END IF;
 
     -- Record transaction in immutable audit ledger
@@ -295,7 +306,7 @@ BEGIN
         created_at
     ) VALUES (
         v_order.id,
-        'stripe',
+        'razorpay',
         p_provider_event_id,
         'payment_confirmed',
         p_amount_cents,
@@ -308,6 +319,7 @@ BEGIN
     -- Mark order as paid
     UPDATE public.sponsorship_orders
     SET status = 'paid',
+        provider_payment_id = p_provider_payment_intent_id,
         provider_payment_intent_id = p_provider_payment_intent_id,
         paid_at = v_now,
         updated_at = v_now
@@ -331,12 +343,14 @@ BEGIN
 
     -- Compute canonical financial totals strictly from paid orders
     SELECT COUNT(*) INTO v_spots_sold FROM public.brand_spots WHERE status = 'sold';
+    SELECT COALESCE(SUM(amount_cents), 0) INTO v_total_inr FROM public.sponsorship_orders WHERE status = 'paid' AND currency = 'inr';
     SELECT COALESCE(SUM(amount_cents), 0) INTO v_total_usd FROM public.sponsorship_orders WHERE status = 'paid' AND currency = 'usd';
     SELECT COALESCE(SUM(amount_cents), 0) INTO v_total_eur FROM public.sponsorship_orders WHERE status = 'paid' AND currency = 'eur';
 
     -- Update campaign stats
     UPDATE public.site_stats
     SET spots_sold = v_spots_sold,
+        total_raised_inr_paise = v_total_inr,
         total_raised_usd_cents = v_total_usd,
         total_raised_eur_cents = v_total_eur,
         updated_at = v_now
@@ -356,6 +370,7 @@ CREATE OR REPLACE FUNCTION public.record_real_pageview()
 RETURNS BIGINT
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
     new_views BIGINT;
@@ -371,6 +386,10 @@ END;
 $$;
 
 -- 13. Grant explicit access to trusted functions
+REVOKE EXECUTE ON FUNCTION public.atomic_reserve_spot(INT, TEXT, INT) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.release_expired_reservations() FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.confirm_paid_order(TEXT, TEXT, TEXT, INT, TEXT, JSONB) FROM PUBLIC, anon;
+
 GRANT EXECUTE ON FUNCTION public.atomic_reserve_spot(INT, TEXT, INT) TO service_role;
 GRANT EXECUTE ON FUNCTION public.release_expired_reservations() TO service_role;
 GRANT EXECUTE ON FUNCTION public.confirm_paid_order(TEXT, TEXT, TEXT, INT, TEXT, JSONB) TO service_role;

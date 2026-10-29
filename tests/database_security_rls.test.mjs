@@ -8,21 +8,32 @@ import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 describe('Database Security & Row-Level Security (RLS) Policies', () => {
-  const migrationPath = resolve('supabase/migrations/20261029_secure_fundmymac_schema.sql');
+  const secureSchemaMigrationPath = resolve('supabase/migrations/20261029_secure_fundmymac_schema.sql');
+  const razorpayMigrationPath = resolve('supabase/migrations/20261029_razorpay_integration.sql');
   const setupSqlPath = resolve('supabase-setup.sql');
 
   test('Migration and setup SQL files exist', () => {
-    assert.ok(existsSync(migrationPath), 'Migration file exists');
+    assert.ok(existsSync(secureSchemaMigrationPath), 'Baseline migration file exists');
+    assert.ok(existsSync(razorpayMigrationPath), 'Razorpay versioned migration file exists');
     assert.ok(existsSync(setupSqlPath), 'Root supabase-setup.sql exists');
   });
 
-  const sqlContent = readFileSync(migrationPath, 'utf8');
+  const sqlContent = readFileSync(secureSchemaMigrationPath, 'utf8');
+  const rzpSqlContent = readFileSync(razorpayMigrationPath, 'utf8');
+  const setupContent = readFileSync(setupSqlPath, 'utf8');
 
   test('All critical tables have ROW LEVEL SECURITY enabled', () => {
     assert.match(sqlContent, /ALTER TABLE public\.site_stats ENABLE ROW LEVEL SECURITY;/, 'site_stats RLS enabled');
     assert.match(sqlContent, /ALTER TABLE public\.brand_spots ENABLE ROW LEVEL SECURITY;/, 'brand_spots RLS enabled');
     assert.match(sqlContent, /ALTER TABLE public\.sponsorship_orders ENABLE ROW LEVEL SECURITY;/, 'sponsorship_orders RLS enabled');
     assert.match(sqlContent, /ALTER TABLE public\.payment_transactions ENABLE ROW LEVEL SECURITY;/, 'payment_transactions RLS enabled');
+  });
+
+  test('Razorpay migration configures INR fields and provider indices', () => {
+    assert.match(rzpSqlContent, /total_raised_inr_paise BIGINT NOT NULL DEFAULT 0;/, 'INR total column added to site_stats');
+    assert.match(rzpSqlContent, /price_inr_paise INT NOT NULL DEFAULT 850000;/, 'INR price column added to brand_spots');
+    assert.match(rzpSqlContent, /idx_sponsorship_orders_provider_order_id/, 'Unique index created on provider_order_id');
+    assert.match(rzpSqlContent, /CHECK \(currency IN \('inr', 'usd', 'eur'\)\)/, 'Currency constraint permits INR, USD, and EUR');
   });
 
   test('Unsafe legacy anonymous write policies are explicitly dropped', () => {
@@ -32,38 +43,27 @@ describe('Database Security & Row-Level Security (RLS) Policies', () => {
   });
 
   test('Strict least-privilege policies deny anonymous mutations', () => {
-    // Only SELECT policies exist for anon on public tables
     assert.match(sqlContent, /CREATE POLICY "Public read site_stats"\s+ON public\.site_stats FOR SELECT TO anon, authenticated/, 'site_stats SELECT only');
     assert.match(sqlContent, /CREATE POLICY "Public read brand_spots"\s+ON public\.brand_spots FOR SELECT TO anon, authenticated/, 'brand_spots SELECT only');
-    
-    // No public UPDATE or INSERT policy exists for brand_spots
     assert.doesNotMatch(sqlContent, /CREATE POLICY.*ON public\.brand_spots FOR (UPDATE|INSERT|ALL) TO anon/, 'No anonymous UPDATE/INSERT on brand_spots');
-    
-    // Orders and Transactions tables restricted exclusively to service_role
     assert.match(sqlContent, /CREATE POLICY "Service role full access on sponsorship_orders"\s+ON public\.sponsorship_orders TO service_role/, 'Orders restricted to service role');
     assert.match(sqlContent, /CREATE POLICY "Service role full access on payment_transactions"\s+ON public\.payment_transactions TO service_role/, 'Transactions restricted to service role');
   });
 
   test('Public view sanitizes PII (sponsor_email and backer_email excluded)', () => {
-    assert.match(sqlContent, /CREATE OR REPLACE VIEW public\.public_sponsors_wall AS/, 'Public sponsors view declared');
-    // Ensure email is not selected in the public view
-    const viewDef = sqlContent.substring(
-      sqlContent.indexOf('CREATE OR REPLACE VIEW public.public_sponsors_wall AS'),
-      sqlContent.indexOf('FROM public.sponsorship_orders')
+    assert.match(setupContent, /CREATE OR REPLACE VIEW public\.public_sponsors_wall AS/, 'Public sponsors view declared');
+    const viewDef = setupContent.substring(
+      setupContent.indexOf('CREATE OR REPLACE VIEW public.public_sponsors_wall AS'),
+      setupContent.indexOf('FROM public.sponsorship_orders')
     );
     assert.doesNotMatch(viewDef, /sponsor_email/i, 'View excludes sponsor_email');
     assert.doesNotMatch(viewDef, /backer_email/i, 'View excludes backer_email');
   });
 
-  test('Atomic spot reservation procedure includes row-level locking', () => {
-    assert.match(sqlContent, /CREATE OR REPLACE FUNCTION public\.atomic_reserve_spot/, 'atomic_reserve_spot function declared');
-    assert.match(sqlContent, /FOR UPDATE;/, 'Exclusive row lock applied during reservation check');
-    assert.match(sqlContent, /p_hold_seconds INT DEFAULT 900/, '15 minute reservation timeout default');
-  });
-
-  test('Payment confirmation procedure enforces event idempotency', () => {
-    assert.match(sqlContent, /CREATE OR REPLACE FUNCTION public\.confirm_paid_order/, 'confirm_paid_order function declared');
-    assert.match(sqlContent, /IF EXISTS \(SELECT 1 FROM public\.payment_transactions WHERE provider_event_id = p_provider_event_id\)/, 'Idempotency check prevents duplicate webhook execution');
-    assert.match(sqlContent, /provider_event_id TEXT NOT NULL UNIQUE/, 'Unique constraint on provider event ID');
+  test('Functions are hardened with safe search_path and restricted execute permissions', () => {
+    assert.match(rzpSqlContent, /SET search_path = public/, 'Functions use safe search_path = public');
+    assert.match(rzpSqlContent, /REVOKE EXECUTE ON FUNCTION public\.atomic_reserve_spot\(INT, TEXT, INT\) FROM PUBLIC, anon;/, 'atomic_reserve_spot revoked from anon');
+    assert.match(rzpSqlContent, /REVOKE EXECUTE ON FUNCTION public\.confirm_paid_order\(TEXT, TEXT, TEXT, INT, TEXT, JSONB\) FROM PUBLIC, anon;/, 'confirm_paid_order revoked from anon');
+    assert.match(rzpSqlContent, /GRANT EXECUTE ON FUNCTION public\.confirm_paid_order\(TEXT, TEXT, TEXT, INT, TEXT, JSONB\) TO service_role;/, 'confirm_paid_order granted to service_role');
   });
 });

@@ -4,17 +4,17 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { StripePaymentAdapter } from '../src/server/payment/stripeAdapter.ts';
+import { RazorpayPaymentAdapter } from '../src/server/payment/razorpayAdapter.ts';
 
 describe('Atomic Inventory Reservation & Concurrency Protection', () => {
-  const adapter = new StripePaymentAdapter({ isTestMode: true });
+  const adapter = new RazorpayPaymentAdapter({ isTestMode: true });
 
   test('Concurrent reservation collision prevents duplicate spot sales', async () => {
     // 1. User A reserves Spot #10
     const userA = await adapter.createCheckoutSession({
       orderType: 'spot_sponsorship',
       spotId: 10,
-      currency: 'usd',
+      currency: 'inr',
       sponsorName: 'User A Corp',
       sponsorEmail: 'usera@corp.com',
       successUrl: 'http://localhost/success',
@@ -27,7 +27,7 @@ describe('Atomic Inventory Reservation & Concurrency Protection', () => {
     const userB = await adapter.createCheckoutSession({
       orderType: 'spot_sponsorship',
       spotId: 10,
-      currency: 'usd',
+      currency: 'inr',
       sponsorName: 'User B Corp',
       sponsorEmail: 'userb@corp.com',
       successUrl: 'http://localhost/success',
@@ -38,12 +38,12 @@ describe('Atomic Inventory Reservation & Concurrency Protection', () => {
     assert.match(userB.error || '', /Spot is currently held in checkout by another backer/);
   });
 
-  test('Expired session releases lock and allows re-reservation', async () => {
+  test('Expired/failed session releases lock and allows re-reservation', async () => {
     // 1. Create a session for Spot #15
     const session = await adapter.createCheckoutSession({
       orderType: 'spot_sponsorship',
       spotId: 15,
-      currency: 'usd',
+      currency: 'inr',
       sponsorName: 'Temporary User',
       sponsorEmail: 'temp@user.com',
       successUrl: 'http://localhost/success',
@@ -52,20 +52,24 @@ describe('Atomic Inventory Reservation & Concurrency Protection', () => {
 
     assert.equal(session.success, true);
 
-    // 2. Simulate session expiry webhook
-    const expiredWebhook = {
-      id: `evt_exp_${Date.now()}`,
-      type: 'checkout.session.expired',
-      data: {
-        object: {
-          id: session.sessionId
+    // 2. Simulate payment failed webhook event
+    const failedWebhook = {
+      entity: 'event',
+      event: 'payment.failed',
+      payload: {
+        payment: {
+          entity: {
+            id: `pay_fail_${Date.now()}`,
+            order_id: session.razorpayOrderId,
+            status: 'failed'
+          }
         }
       }
     };
 
     const webhookRes = await adapter.processWebhookEvent(
-      JSON.stringify(expiredWebhook),
-      't=1700000000,v1=test_signature'
+      JSON.stringify(failedWebhook),
+      'sig_test_simulated'
     );
 
     assert.equal(webhookRes.success, true);
@@ -75,14 +79,14 @@ describe('Atomic Inventory Reservation & Concurrency Protection', () => {
     const newUser = await adapter.createCheckoutSession({
       orderType: 'spot_sponsorship',
       spotId: 15,
-      currency: 'usd',
+      currency: 'inr',
       sponsorName: 'New Backer',
       sponsorEmail: 'new@backer.com',
       successUrl: 'http://localhost/success',
       cancelUrl: 'http://localhost/cancel'
     });
 
-    assert.equal(newUser.success, true, 'Spot #15 must be claimable after expiry');
+    assert.equal(newUser.success, true, 'Spot #15 must be claimable after previous failure release');
   });
 
   test('Paid spot is permanently locked against future checkout attempts', async () => {
@@ -90,39 +94,29 @@ describe('Atomic Inventory Reservation & Concurrency Protection', () => {
     const session = await adapter.createCheckoutSession({
       orderType: 'spot_sponsorship',
       spotId: 18,
-      currency: 'usd',
+      currency: 'inr',
       sponsorName: 'Permanent Sponsor',
       sponsorEmail: 'permanent@sponsor.com',
       successUrl: 'http://localhost/success',
       cancelUrl: 'http://localhost/cancel'
     });
 
-    // 2. Process payment confirmation
-    const paymentCompletedEvent = {
-      id: `evt_pay_${Date.now()}`,
-      type: 'checkout.session.completed',
-      data: {
-        object: {
-          id: session.sessionId,
-          amount_total: 10000,
-          currency: 'usd'
-        }
-      }
-    };
-
-    const payRes = await adapter.processWebhookEvent(
-      JSON.stringify(paymentCompletedEvent),
-      't=1700000000,v1=test_signature'
-    );
+    // 2. Process payment confirmation via verifyPaymentSignature
+    const payRes = await adapter.verifyPaymentSignature({
+      razorpayOrderId: session.razorpayOrderId,
+      razorpayPaymentId: `pay_perm_${Date.now()}`,
+      razorpaySignature: 'sig_test_valid',
+      orderId: session.orderId
+    });
 
     assert.equal(payRes.success, true);
-    assert.equal(payRes.status, 'confirmed');
+    assert.equal(payRes.verified, true);
 
     // 3. Any subsequent checkout attempt for Spot #18 MUST fail permanently
     const attempt = await adapter.createCheckoutSession({
       orderType: 'spot_sponsorship',
       spotId: 18,
-      currency: 'usd',
+      currency: 'inr',
       sponsorName: 'Late Buyer',
       sponsorEmail: 'late@buyer.com',
       successUrl: 'http://localhost/success',

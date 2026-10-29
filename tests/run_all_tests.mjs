@@ -3,7 +3,6 @@
 // =========================================================================
 
 import { spawn } from 'node:child_process';
-import { resolve } from 'node:path';
 
 const testFiles = [
   'tests/database_security_rls.test.mjs',

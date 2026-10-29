@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { SponsorTier } from '../data/fundMyMacData';
-import { initiateCheckoutSession } from '../lib/checkoutApi';
+import { initiateCheckoutSession, loadRazorpayScript, verifyRazorpayPayment } from '../lib/checkoutApi';
 
 interface DonationModalProps {
   isOpen: boolean;
@@ -64,6 +64,7 @@ export const DonationModal: React.FC<DonationModalProps> = ({
       const result = await initiateCheckoutSession({
         orderType: selectedTier ? 'tier_sponsorship' : 'custom_donation',
         tierId: selectedTier?.id,
+        customAmountMinor: selectedTier ? undefined : customAmount * 100,
         customAmountCents: selectedTier ? undefined : customAmount * 100,
         currency: currency.toLowerCase() as 'usd' | 'eur',
         sponsorName: sponsorName.trim(),
@@ -71,14 +72,70 @@ export const DonationModal: React.FC<DonationModalProps> = ({
         sponsorUrl: sponsorUrl.trim() || undefined
       });
 
-      if (!result.success || !result.checkoutUrl) {
+      if (!result.success) {
         setErrorMessage(result.error || 'Failed to initialize secure checkout. Please try again.');
         setIsSubmitting(false);
         return;
       }
 
-      // Redirect to provider checkout
-      window.location.href = result.checkoutUrl;
+      // If test mode sandbox fallback
+      if (result.isTestMode && result.checkoutUrl) {
+        window.location.href = result.checkoutUrl;
+        return;
+      }
+
+      // Official Razorpay Standard Checkout Modal
+      if (result.razorpayOrderId && result.keyId) {
+        const scriptLoaded = await loadRazorpayScript();
+        if (!scriptLoaded || !window.Razorpay) {
+          setErrorMessage('Failed to load Razorpay Checkout SDK. Please check your network connection.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        const rzp = new window.Razorpay({
+          key: result.keyId,
+          amount: result.amountMinor || result.amountCents || effectiveAmount * 100,
+          currency: (result.currency || currency).toUpperCase(),
+          name: 'Fund My Mac / VESPER',
+          description: selectedTier ? `Tier Sponsorship — ${selectedTier.name}` : 'Backer Contribution',
+          order_id: result.razorpayOrderId,
+          prefill: {
+            name: sponsorName.trim(),
+            email: sponsorEmail.trim()
+          },
+          theme: { color: '#0071e3' },
+          handler: async (response) => {
+            const verifyRes = await verifyRazorpayPayment({
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpayOrderId: response.razorpay_order_id,
+              razorpaySignature: response.razorpay_signature,
+              orderId: result.orderId
+            });
+
+            if (verifyRes.success && verifyRes.verified) {
+              window.location.href = `/?session_id=${encodeURIComponent(response.razorpay_order_id)}&status=success`;
+            } else {
+              setErrorMessage(verifyRes.error || 'Payment signature verification failed.');
+              setIsSubmitting(false);
+            }
+          },
+          modal: {
+            ondismiss: () => {
+              setIsSubmitting(false);
+            }
+          }
+        });
+
+        rzp.open();
+        return;
+      }
+
+      if (result.checkoutUrl) {
+        window.location.href = result.checkoutUrl;
+      } else {
+        setIsSubmitting(false);
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Network error during checkout';
       setErrorMessage(msg);
@@ -209,7 +266,7 @@ export const DonationModal: React.FC<DonationModalProps> = ({
             disabled={isSubmitting}
           >
             {isSubmitting
-              ? 'Opening Secure Stripe Checkout...'
+              ? 'Opening Secure Razorpay Checkout...'
               : `Proceed to Pay ${effectiveAmount.toLocaleString()} ${currencySymbol}`}
           </button>
         </form>

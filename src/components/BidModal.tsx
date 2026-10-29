@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { BrandSpot } from '../data/fundMyMacData';
-import { initiateCheckoutSession } from '../lib/checkoutApi';
+import { initiateCheckoutSession, loadRazorpayScript, verifyRazorpayPayment } from '../lib/checkoutApi';
 import { validateLogoFile } from '../server/payment/assetValidator';
 
 interface BidModalProps {
@@ -92,14 +92,70 @@ export const BidModal: React.FC<BidModalProps> = ({
         logoUrl: logoPreview || undefined
       });
 
-      if (!result.success || !result.checkoutUrl) {
+      if (!result.success) {
         setErrorMessage(result.error || 'Failed to initialize secure checkout. Please try again.');
         setIsSubmitting(false);
         return;
       }
 
-      // Redirect user to the secure checkout provider session
-      window.location.href = result.checkoutUrl;
+      // If test mode sandbox fallback
+      if (result.isTestMode && result.checkoutUrl) {
+        window.location.href = result.checkoutUrl;
+        return;
+      }
+
+      // Official Razorpay Standard Checkout Modal
+      if (result.razorpayOrderId && result.keyId) {
+        const scriptLoaded = await loadRazorpayScript();
+        if (!scriptLoaded || !window.Razorpay) {
+          setErrorMessage('Failed to load Razorpay Checkout SDK. Please check your network connection.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        const rzp = new window.Razorpay({
+          key: result.keyId,
+          amount: result.amountMinor || result.amountCents || currentBid * 100,
+          currency: (result.currency || currency).toUpperCase(),
+          name: 'Fund My Mac / VESPER',
+          description: `Sticker Spot #${spot.id} (${spot.name})`,
+          order_id: result.razorpayOrderId,
+          prefill: {
+            name: brandName.trim(),
+            email: email.trim()
+          },
+          theme: { color: '#0071e3' },
+          handler: async (response) => {
+            const verifyRes = await verifyRazorpayPayment({
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpayOrderId: response.razorpay_order_id,
+              razorpaySignature: response.razorpay_signature,
+              orderId: result.orderId
+            });
+
+            if (verifyRes.success && verifyRes.verified) {
+              window.location.href = `/?session_id=${encodeURIComponent(response.razorpay_order_id)}&status=success`;
+            } else {
+              setErrorMessage(verifyRes.error || 'Payment signature verification failed.');
+              setIsSubmitting(false);
+            }
+          },
+          modal: {
+            ondismiss: () => {
+              setIsSubmitting(false);
+            }
+          }
+        });
+
+        rzp.open();
+        return;
+      }
+
+      if (result.checkoutUrl) {
+        window.location.href = result.checkoutUrl;
+      } else {
+        setIsSubmitting(false);
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Network error during checkout';
       setErrorMessage(msg);
@@ -277,7 +333,7 @@ export const BidModal: React.FC<BidModalProps> = ({
                 <strong>{currentBid.toLocaleString()} {currencySymbol}</strong>
               </div>
               <div style={{ fontSize: '11px', color: '#86868b' }}>
-                Payment is processed securely via Stripe. Spot #{spot.id} will be held exclusively for you during checkout.
+                Payment is processed securely via Razorpay (UPI, Cards, NetBanking). Spot #{spot.id} will be held exclusively for you during checkout.
               </div>
             </div>
 

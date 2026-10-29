@@ -183,7 +183,7 @@ export const CheckoutVerificationModal: React.FC<CheckoutVerificationModalProps>
                 <span>🧪 Test-Mode Sandbox Verification</span>
               </div>
               <p style={{ fontSize: '12px', color: '#3b82f6', marginTop: '6px', lineHeight: 1.5 }}>
-                Live Stripe merchant credentials are not configured in this development environment.
+                Live Razorpay merchant credentials are not configured in this development environment.
                 The checkout session was securely registered in test mode.
               </p>
             </div>

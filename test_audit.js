@@ -40,14 +40,15 @@ assert(existsSync(envExamplePath), '.env.example file exists');
 const envExampleContent = readFileSync(envExamplePath, 'utf-8');
 assert(envExampleContent.includes('VITE_SUPABASE_URL'), 'VITE_SUPABASE_URL documented in .env.example');
 assert(envExampleContent.includes('VITE_SUPABASE_ANON_KEY'), 'VITE_SUPABASE_ANON_KEY documented in .env.example');
-assert(envExampleContent.includes('STRIPE_SECRET_KEY'), 'STRIPE_SECRET_KEY server secret documented in .env.example');
-assert(envExampleContent.includes('STRIPE_WEBHOOK_SECRET'), 'STRIPE_WEBHOOK_SECRET server secret documented in .env.example');
+assert(envExampleContent.includes('RAZORPAY_KEY_ID'), 'RAZORPAY_KEY_ID server secret documented in .env.example');
+assert(envExampleContent.includes('RAZORPAY_KEY_SECRET'), 'RAZORPAY_KEY_SECRET server secret documented in .env.example');
+assert(envExampleContent.includes('RAZORPAY_WEBHOOK_SECRET'), 'RAZORPAY_WEBHOOK_SECRET server secret documented in .env.example');
 
 // TEST 3: Spot Data Model Verification (fundMyMacData.ts)
 const dataContent = readFileSync(resolve('src/data/fundMyMacData.ts'), 'utf-8');
 assert(dataContent.includes('id: 20'), 'All 20 spots configured in BRAND_SPOTS');
 assert(dataContent.includes('Device Lifelong'), 'FAQ explicitly defines Device Lifelong duration');
-assert(dataContent.includes('Stripe Checkout'), 'FAQ explicitly supports Stripe Checkout');
+assert(dataContent.includes('Razorpay Checkout'), 'FAQ explicitly supports Razorpay Checkout');
 
 // TEST 4: MacbookDisplay Component Verification
 const macbookContent = readFileSync(resolve('src/components/MacbookDisplay.tsx'), 'utf-8');
