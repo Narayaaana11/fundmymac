@@ -7,6 +7,7 @@ export interface BrandSpot {
   surface: 'lid' | 'inside' | 'accessory';
   topBidEur: number;
   topBidUsd: number;
+  topBidInr?: number;
   bidCount: number;
   sponsorName: string;
   sponsorUrl: string;
@@ -31,6 +32,7 @@ export interface SponsorTier {
   name: string;
   priceUsd: number;
   priceEur: number;
+  priceInr?: number;
   perks: string[];
   recommended?: boolean;
 }
@@ -50,6 +52,8 @@ export const FUNDING_GOAL = {
   raisedUsd: 0,
   targetEur: 3650,
   raisedEur: 0,
+  targetInr: 335000,
+  raisedInr: 0,
   hasNoLimit: true,
   deviceTarget: 'MacBook Pro 16″ (Apple M5 Max / M5 Pro · 128GB Unified Memory · 2TB SSD)',
   devicePurpose: 'Zero-latency local LLM fine-tuning, autonomous VESPER multi-agent workflows, Docker clusters, and IRL founder roadshows without thermal throttling.',
@@ -141,6 +145,7 @@ export const SPONSOR_TIERS: SponsorTier[] = [
     name: 'Indie Backer',
     priceUsd: 25,
     priceEur: 22,
+    priceInr: 2100,
     perks: [
       'Name & link on the official Fund My Mac Sponsors Wall',
       'Personal shoutout on X/Twitter and LinkedIn from the founder',
@@ -153,6 +158,7 @@ export const SPONSOR_TIERS: SponsorTier[] = [
     name: 'The Corner Sponsor',
     priceUsd: 75,
     priceEur: 69,
+    priceInr: 6300,
     perks: [
       'Featured placement in the sticky live Corner Widget for 48 hours',
       'Dofollow backlink from Fund My Mac & VESPER Sponsors page',
@@ -165,6 +171,7 @@ export const SPONSOR_TIERS: SponsorTier[] = [
     name: 'Accessory / Palm Rest Sticker',
     priceUsd: 150,
     priceEur: 138,
+    priceInr: 12500,
     perks: [
       'High-grade vinyl sticker on the Palm Rest or 140W GaN Charger',
       'Visible in every screen recording, podcast, and video call',
@@ -178,6 +185,7 @@ export const SPONSOR_TIERS: SponsorTier[] = [
     name: 'Prime Lid Sticker Spot',
     priceUsd: 250,
     priceEur: 230,
+    priceInr: 21000,
     recommended: true,
     perks: [
       'Prime position on the MacBook Pro aluminum lid facing the world',
@@ -192,6 +200,7 @@ export const SPONSOR_TIERS: SponsorTier[] = [
     name: 'Marquee Title Partner',
     priceUsd: 500,
     priceEur: 460,
+    priceInr: 42000,
     perks: [
       'Top-tier placement right above the Apple logo (Highest visibility)',
       '"Powered by [Your Brand]" logo tag on every slide of the VESPER pitch deck',
@@ -559,6 +568,6 @@ export const FAQ_DATA = [
   },
   {
     question: 'What payment methods do you support?',
-    answer: 'We support instant Stripe Checkout (Credit/Debit Cards, Apple Pay, Google Pay), PayPal, UPI, and Crypto (ETH / Solana / USDC).'
+    answer: 'We support instant Razorpay Checkout (UPI, Credit/Debit Cards, NetBanking, Wallets), and direct Backer pledges.'
   }
 ];

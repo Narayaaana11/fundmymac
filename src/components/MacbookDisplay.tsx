@@ -2,8 +2,10 @@ import React, { useState, useRef } from 'react';
 import type { BrandSpot } from '../data/fundMyMacData';
 import { BRAND_SPOTS } from '../data/fundMyMacData';
 
+import type { DisplayCurrency } from './BrandMyMacNavbar';
+
 interface MacbookDisplayProps {
-  currency: 'EUR' | 'USD';
+  currency: DisplayCurrency;
   onSpotClick: (spot: BrandSpot) => void;
   spots?: BrandSpot[];
 }
@@ -69,7 +71,11 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
     return previewTargetSpotId === spotId;
   };
 
-  const formatPrice = (eur: number, usd: number) => {
+  const formatPrice = (eur: number, usd: number, inr?: number) => {
+    if (currency === 'INR') {
+      const val = inr || Math.round(usd * 84);
+      return `₹${val.toLocaleString('en-IN')}`;
+    }
     return currency === 'EUR' ? `${eur.toLocaleString()} €` : `$${usd.toLocaleString()}`;
   };
 
@@ -292,7 +298,7 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
                       gridColumn: spot.gridColumn,
                       gridRow: spot.gridRow
                     }}
-                    title={`${spot.name} — ${spot.sponsorName} (${formatPrice(spot.topBidEur, spot.topBidUsd)})`}
+                    title={`${spot.name} — ${spot.sponsorName} (${formatPrice(spot.topBidEur, spot.topBidUsd, spot.topBidInr)})`}
                   >
                     <div className="bmm-spot-content">
                       <div className="bmm-spot-logo-wrap">
@@ -319,14 +325,14 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
                           />
                         ) : (
                           <span className="bmm-spot-sponsor-title">
-                            {viewMode === 'final' ? '' : spot.sponsorName}
+                            {viewMode === 'final' ? '' : (spot.isSold ? spot.sponsorName : (spot.id === 2 ? 'Prime Marquee' : 'Open Spot'))}
                           </span>
                         )}
                       </div>
 
                       {viewMode === 'auction' && (
                         <span className="bmm-spot-price-tag">
-                          {formatPrice(spot.topBidEur, spot.topBidUsd)}
+                          {formatPrice(spot.topBidEur, spot.topBidUsd, spot.topBidInr)}
                         </span>
                       )}
                     </div>
@@ -403,7 +409,7 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
                               lineHeight: 1.15
                             }}
                           >
-                            {viewMode === 'final' ? '' : spot.sponsorName}
+                            {viewMode === 'final' ? '' : (spot.isSold ? spot.sponsorName : 'Open Spot')}
                           </span>
                         )}
                       </div>
@@ -413,7 +419,7 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
                           className="bmm-spot-price-tag"
                           style={{ fontSize: '11px' }}
                         >
-                          {formatPrice(spot.topBidEur, spot.topBidUsd)}
+                          {formatPrice(spot.topBidEur, spot.topBidUsd, spot.topBidInr)}
                         </span>
                       )}
                     </div>
@@ -448,7 +454,7 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
                     )}
                     {viewMode === 'auction' && (
                       <span className="bmm-spot-price-tag">
-                        {formatPrice(chargerSpot.topBidEur, chargerSpot.topBidUsd)}
+                        {formatPrice(chargerSpot.topBidEur, chargerSpot.topBidUsd, chargerSpot.topBidInr)}
                       </span>
                     )}
                   </div>
@@ -482,7 +488,7 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
                     )}
                     {viewMode === 'auction' && (
                       <span className="bmm-spot-price-tag">
-                        {formatPrice(mouseSpot.topBidEur, mouseSpot.topBidUsd)}
+                        {formatPrice(mouseSpot.topBidEur, mouseSpot.topBidUsd, mouseSpot.topBidInr)}
                       </span>
                     )}
                   </div>
@@ -502,7 +508,7 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
         <div
           className="bmm-mobile-acc-card"
           onClick={() => onSpotClick(chargerSpot)}
-          title={`${chargerSpot.name} (${formatPrice(chargerSpot.topBidEur, chargerSpot.topBidUsd)})`}
+          title={`${chargerSpot.name} (${formatPrice(chargerSpot.topBidEur, chargerSpot.topBidUsd, chargerSpot.topBidInr)})`}
         >
           <span className="bmm-mobile-acc-label">charger + cable · spot #19</span>
           <div className="bmm-mobile-acc-img-wrap" style={{ position: 'relative' }}>
@@ -524,7 +530,7 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
             )}
           </div>
           <span className="bmm-mobile-acc-status">
-            {shouldShowPreviewLogo(chargerSpot.id) ? '✨ Previewing Your Logo' : chargerSpot.isSold ? `Sponsored by ${chargerSpot.sponsorName}` : `Claim for ${formatPrice(chargerSpot.topBidEur, chargerSpot.topBidUsd)}`}
+            {shouldShowPreviewLogo(chargerSpot.id) ? '✨ Previewing Your Logo' : chargerSpot.isSold ? `Sponsored by ${chargerSpot.sponsorName}` : `Claim for ${formatPrice(chargerSpot.topBidEur, chargerSpot.topBidUsd, chargerSpot.topBidInr)}`}
           </span>
         </div>
 
@@ -532,7 +538,7 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
         <div
           className="bmm-mobile-acc-card"
           onClick={() => onSpotClick(mouseSpot)}
-          title={`${mouseSpot.name} (${formatPrice(mouseSpot.topBidEur, mouseSpot.topBidUsd)})`}
+          title={`${mouseSpot.name} (${formatPrice(mouseSpot.topBidEur, mouseSpot.topBidUsd, mouseSpot.topBidInr)})`}
         >
           <span className="bmm-mobile-acc-label">Magic Mouse · spot #20</span>
           <div className="bmm-mobile-acc-img-wrap" style={{ position: 'relative' }}>
@@ -554,7 +560,7 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
             )}
           </div>
           <span className="bmm-mobile-acc-status">
-            {shouldShowPreviewLogo(mouseSpot.id) ? '✨ Previewing Your Logo' : mouseSpot.isSold ? `Sponsored by ${mouseSpot.sponsorName}` : `Claim for ${formatPrice(mouseSpot.topBidEur, mouseSpot.topBidUsd)}`}
+            {shouldShowPreviewLogo(mouseSpot.id) ? '✨ Previewing Your Logo' : mouseSpot.isSold ? `Sponsored by ${mouseSpot.sponsorName}` : `Claim for ${formatPrice(mouseSpot.topBidEur, mouseSpot.topBidUsd, mouseSpot.topBidInr)}`}
           </span>
         </div>
       </div>

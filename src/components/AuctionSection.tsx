@@ -3,16 +3,20 @@ import type { BrandSpot } from '../data/fundMyMacData';
 import { BRAND_SPOTS } from '../data/fundMyMacData';
 import { SpotlightCard } from './SpotlightCard';
 
+import type { DisplayCurrency } from './BrandMyMacNavbar';
+
 interface AuctionSectionProps {
-  currency: 'EUR' | 'USD';
+  currency: DisplayCurrency;
   onSpotClick: (spot: BrandSpot) => void;
   spots?: BrandSpot[];
+  isLiveSync?: boolean;
 }
 
 export const AuctionSection: React.FC<AuctionSectionProps> = ({
   currency,
   onSpotClick,
-  spots
+  spots,
+  isLiveSync = false
 }) => {
   const [filterSurface, setFilterSurface] = useState<'all' | 'lid' | 'inside' | 'accessory'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -24,7 +28,11 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
     activeSpots.find((s) => s.id === 3) || BRAND_SPOTS.find((s) => s.id === 3)!  // Top Right
   ];
 
-  const formatPrice = (eur: number, usd: number) => {
+  const formatPrice = (eur: number, usd: number, inr?: number) => {
+    if (currency === 'INR') {
+      const val = inr || Math.round(usd * 84);
+      return `₹${val.toLocaleString('en-IN')}`;
+    }
     return currency === 'EUR' ? `${eur.toLocaleString()} €` : `$${usd.toLocaleString()}`;
   };
 
@@ -36,18 +44,22 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
     return matchesSurface && matchesSearch;
   });
 
+  const openSpotsCount = activeSpots.filter((s) => !s.isSold).length;
+
   return (
     <section id="spots" className="bmm-auction-section">
       <div className="bmm-auction-inner">
         {/* Available Spots Badge */}
         <div className="bmm-spots-taken-badge">
           <span className="bmm-pulse-dot">
-            <span />
-            <span />
+            <span style={{ background: isLiveSync ? '#34c759' : '#8e8e93' }} />
+            <span style={{ background: isLiveSync ? 'rgba(52, 199, 89, 0.4)' : 'rgba(142, 142, 147, 0.4)' }} />
           </span>
-          <span>· 20 of 20 Sticker Spots Open for Sponsorship</span>
+          <span>· {openSpotsCount} of {activeSpots.length} Sticker Spots Open for Sponsorship</span>
           <span className="bmm-badge-divider">|</span>
-          <span className="bmm-bids-count-pill">Live Reserve</span>
+          <span className="bmm-bids-count-pill">
+            {isLiveSync ? 'Live Reserve' : 'Canonical Catalog (Offline)'}
+          </span>
         </div>
 
         <h2 className="bmm-auction-h2">Available Spots on the Mac</h2>
@@ -55,7 +67,7 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
           Every spot travels with us to conferences, demo days, and founder meetings. Click any spot to secure your placement.
         </p>
         <p className="bmm-auction-pricing-note">
-          Lid spots from {currency === 'EUR' ? '90 €' : '$100'} Small · {currency === 'EUR' ? '160 €' : '$175'} Medium · {currency === 'EUR' ? '230 €' : '$250'} Large · {currency === 'EUR' ? '460 €' : '$500'} Prime Marquee. Palm rest & accessory spots starting at {currency === 'EUR' ? '70 €' : '$75'}.
+          Lid spots from {currency === 'INR' ? '₹8,500' : currency === 'EUR' ? '90 €' : '$100'} Small · {currency === 'INR' ? '₹15,000' : currency === 'EUR' ? '160 €' : '$175'} Medium · {currency === 'INR' ? '₹21,000' : currency === 'EUR' ? '230 €' : '$250'} Large · {currency === 'INR' ? '₹42,000' : currency === 'EUR' ? '460 €' : '$500'} Prime Marquee. Palm rest & accessory spots starting at {currency === 'INR' ? '₹8,000' : currency === 'EUR' ? '70 €' : '$75'}.
         </p>
 
         {/* Featured Prime Positions SpotlightCard */}
@@ -70,7 +82,15 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
               <li
                 key={spot.id}
                 className="bmm-leaderboard-item"
+                role="button"
+                tabIndex={0}
                 onClick={() => onSpotClick(spot)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onSpotClick(spot);
+                  }
+                }}
                 style={{ cursor: 'pointer' }}
               >
                 <span
@@ -92,11 +112,28 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <span className="bmm-leaderboard-amount">
-                    {formatPrice(spot.topBidEur, spot.topBidUsd)}
+                    {formatPrice(spot.topBidEur, spot.topBidUsd, spot.topBidInr)}
                   </span>
-                  <button type="button" className="bmm-btn-blue" style={{ fontSize: '11px', padding: '4px 10px' }}>
-                    Claim Spot
-                  </button>
+                  {spot.isSold ? (
+                    <span
+                      className="bmm-sold-badge"
+                      style={{ background: 'rgba(255, 69, 58, 0.12)', color: '#ff453a', borderColor: 'rgba(255, 69, 58, 0.3)' }}
+                    >
+                      Claimed
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="bmm-btn-blue bmm-claim-spot-btn"
+                      style={{ fontSize: '12px', minHeight: '34px', padding: '6px 14px' }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSpotClick(spot);
+                      }}
+                    >
+                      Claim Spot
+                    </button>
+                  )}
                 </div>
               </li>
             ))}
@@ -145,7 +182,15 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
               <div
                 key={spot.id}
                 className="bmm-spot-row"
+                role="button"
+                tabIndex={0}
                 onClick={() => onSpotClick(spot)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onSpotClick(spot);
+                  }
+                }}
                 style={{ cursor: 'pointer' }}
               >
                 <div className="bmm-spot-row-left">
@@ -160,14 +205,23 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
 
                 <div className="bmm-spot-row-right">
                   <span className="bmm-leaderboard-amount">
-                    {formatPrice(spot.topBidEur, spot.topBidUsd)}
+                    {formatPrice(spot.topBidEur, spot.topBidUsd, spot.topBidInr)}
                   </span>
-                  <span
-                    className="bmm-sold-badge"
-                    style={{ background: 'rgba(52, 199, 89, 0.12)', color: '#27ae60', borderColor: 'rgba(52, 199, 89, 0.3)' }}
-                  >
-                    Available
-                  </span>
+                  {spot.isSold ? (
+                    <span
+                      className="bmm-sold-badge"
+                      style={{ background: 'rgba(255, 69, 58, 0.12)', color: '#ff453a', borderColor: 'rgba(255, 69, 58, 0.3)' }}
+                    >
+                      Claimed
+                    </span>
+                  ) : (
+                    <span
+                      className="bmm-sold-badge"
+                      style={{ background: 'rgba(52, 199, 89, 0.12)', color: '#27ae60', borderColor: 'rgba(52, 199, 89, 0.3)' }}
+                    >
+                      Available
+                    </span>
+                  )}
                 </div>
               </div>
             ))}

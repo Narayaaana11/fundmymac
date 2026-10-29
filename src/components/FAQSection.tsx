@@ -23,18 +23,27 @@ export const FAQSection: React.FC = () => {
           {FAQ_DATA.map((faq, idx) => {
             const isOpen = openIndex === idx;
             return (
-              <div
-                key={idx}
-                className="bmm-faq-item"
-                onClick={() => toggle(idx)}
-              >
-                <div className="bmm-faq-q">
-                  <span>{faq.question}</span>
-                  <span style={{ fontSize: '18px', color: 'var(--ink-2)' }}>
-                    {isOpen ? '−' : '+'}
-                  </span>
-                </div>
-                {isOpen && <p className="bmm-faq-a">{faq.answer}</p>}
+              <div key={idx} className="bmm-faq-wrapper">
+                <button
+                  type="button"
+                  className={`bmm-faq-item ${isOpen ? 'is-open' : ''}`}
+                  onClick={() => toggle(idx)}
+                  aria-expanded={isOpen}
+                  aria-controls={`faq-answer-${idx}`}
+                  style={{ width: '100%', textAlign: 'left' }}
+                >
+                  <div className="bmm-faq-q">
+                    <span>{faq.question}</span>
+                    <span style={{ fontSize: '18px', color: 'var(--ink-2)' }} aria-hidden="true">
+                      {isOpen ? '−' : '+'}
+                    </span>
+                  </div>
+                  {isOpen && (
+                    <p id={`faq-answer-${idx}`} className="bmm-faq-a">
+                      {faq.answer}
+                    </p>
+                  )}
+                </button>
               </div>
             );
           })}

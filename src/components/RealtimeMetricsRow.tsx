@@ -1,49 +1,62 @@
 import React from 'react';
+import type { BrandSpot } from '../data/fundMyMacData';
 import { useRealtimeMetrics } from '../hooks/useRealtimeMetrics';
 
 interface RealtimeMetricsRowProps {
   className?: string;
+  spots?: BrandSpot[];
   customWsUrl?: string;
 }
 
 export const RealtimeMetricsRow: React.FC<RealtimeMetricsRowProps> = ({
   className,
+  spots,
   customWsUrl
 }) => {
-  const { metrics, highlightField } = useRealtimeMetrics(customWsUrl);
+  const { metrics, highlightField } = useRealtimeMetrics(spots, customWsUrl);
 
   const formattedViews = metrics.xViews >= 1000000
     ? `${(metrics.xViews / 1000000).toFixed(0)}M+`
-    : metrics.xViews.toLocaleString('en-US');
+    : metrics.xViews > 0
+    ? metrics.xViews.toLocaleString('en-US')
+    : null;
 
   return (
     <div className={`bmm-hero-metrics-row ${className || ''}`}>
-      {/* Views on X */}
+      {/* Campaign Roadshow Reach Milestone */}
       <span
         className={`bmm-hero-metric-item ${highlightField === 'xViews' ? 'metric-glow' : ''}`}
-        title={`${metrics.xViews.toLocaleString('en-US')} live impressions on X`}
+        title={formattedViews ? `${metrics.xViews.toLocaleString('en-US')} campaign reach milestone on X` : 'IRL global startup roadshow'}
       >
-        <strong className="tabular-nums">{formattedViews}</strong> views on X
+        {formattedViews ? (
+          <>
+            <strong className="tabular-nums">{formattedViews}</strong> reach milestone
+          </>
+        ) : (
+          <>
+            <strong className="tabular-nums">IRL</strong> global roadshow
+          </>
+        )}
       </span>
 
       <span className="bmm-hero-metric-sep" aria-hidden="true">•</span>
 
-      {/* 140,548 visitors with live ticking numbers */}
+      {/* Measured unique site visitors */}
       <span
         className={`bmm-hero-metric-item ${highlightField === 'visitors' ? 'metric-glow' : ''}`}
-        title="Live site visitors updated in real time via WebSocket"
+        title="Measured unique session visitors recorded via Supabase"
       >
-        <strong className="tabular-nums">{metrics.visitors.toLocaleString('en-US')}</strong> visitors
+        <strong className="tabular-nums">{metrics.visitors.toLocaleString('en-US')}</strong> site visitors
       </span>
 
       <span className="bmm-hero-metric-sep" aria-hidden="true">•</span>
 
-      {/* 20/20 spots sold */}
+      {/* Canonical spots sold from inventory */}
       <span
         className={`bmm-hero-metric-item ${highlightField === 'spotsSold' ? 'metric-glow' : ''}`}
         title={`${metrics.spotsSold} out of ${metrics.totalSpots} sponsor spots taken`}
       >
-        <strong className="tabular-nums">{metrics.spotsSold}/{metrics.totalSpots}</strong> spots sold
+        <strong className="tabular-nums">{metrics.spotsSold}/{metrics.totalSpots}</strong> spots taken
       </span>
     </div>
   );

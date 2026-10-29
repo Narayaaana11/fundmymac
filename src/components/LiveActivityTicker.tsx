@@ -11,13 +11,11 @@ export interface ActivityItem {
   isReal?: boolean;
 }
 
-const DEFAULT_ACTIVITIES: ActivityItem[] = [
-  { id: 'def-1', sponsor: 'Spot #2 (Marquee Title)', amount: '$500', spot: 'Above Apple Logo', status: 'Available to Sponsor' },
-  { id: 'def-2', sponsor: 'Spot #1 (Top Left Banner)', amount: '$250', spot: 'Exterior Aluminum Lid', status: 'Available to Sponsor' },
-  { id: 'def-3', sponsor: 'The Corner Banner', amount: '$75', spot: 'Sticky Top Left Widget', status: 'Available Now' },
-  { id: 'def-4', sponsor: '140W GaN Fast Charger', amount: '$150', spot: 'Accessory Branding', status: 'Available to Sponsor' },
-  { id: 'def-5', sponsor: 'Apple Magic Mouse', amount: '$99', spot: 'Curved Top Shell', status: 'Available to Sponsor' },
-  { id: 'def-6', sponsor: 'IRL Startup Roadshow', amount: 'Tech Summits', spot: 'Bangalore & SF Demo Days', status: 'Confirmed' }
+// Campaign milestone announcements (transparently informational, not simulated transactions)
+const CAMPAIGN_ANNOUNCEMENTS: ActivityItem[] = [
+  { id: 'ann-1', sponsor: 'VESPER Hardware Goal', amount: '$3,999 Target', spot: 'MacBook Pro 16″ (M5 Max / Pro)', status: 'Campaign Live', isReal: false },
+  { id: 'ann-2', sponsor: 'IRL Founder Roadshow', amount: 'Global Tech Summits', spot: 'Demo Days & VC Meetings', status: 'Scheduled', isReal: false },
+  { id: 'ann-3', sponsor: 'Sticker Spot Sponsorships', amount: '20 Total Spots', spot: 'Lid, Palm Rests, Charger & Mouse', status: 'Now Open', isReal: false }
 ];
 
 interface LiveActivityTickerProps {
@@ -26,97 +24,72 @@ interface LiveActivityTickerProps {
 }
 
 export const LiveActivityTicker: React.FC<LiveActivityTickerProps> = ({ spots, onSpotSelect }) => {
-  const [activities, setActivities] = useState<ActivityItem[]>(DEFAULT_ACTIVITIES);
+  const [dbActivities, setDbActivities] = useState<ActivityItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
 
-  // Sync real sold spots from props / localStorage
-  useEffect(() => {
-    if (!spots) return;
-    const soldSpots = spots.filter((s) => s.isSold);
-    if (soldSpots.length > 0) {
-      const timer = setTimeout(() => {
-        const realItems: ActivityItem[] = soldSpots.map((s) => ({
-          id: `sold-${s.id}`,
-          sponsor: s.sponsorName || `Spot #${s.id}`,
-          amount: `$${s.topBidUsd}`,
-          spot: s.name,
-          status: 'Secured! 🔥',
-          isReal: true
-        }));
+  // Derive verified sold spots from canonical spots prop
+  const soldItems: ActivityItem[] = (spots || [])
+    .filter((s) => s.isSold)
+    .map((s) => ({
+      id: `sold-${s.id}`,
+      sponsor: s.sponsorName || `Spot #${s.id}`,
+      amount: `$${s.topBidUsd}`,
+      spot: s.name,
+      status: 'Verified Sponsor! 🌟',
+      isReal: true
+    }));
 
-        setActivities((prev) => {
-          const withoutOldReal = prev.filter((item) => !item.id.startsWith('sold-'));
-          return [...realItems, ...withoutOldReal];
-        });
-      }, 0);
-      return () => clearTimeout(timer);
-    }
-  }, [spots]);
+  // Deduplicate combined activities
+  const combinedActivities: ActivityItem[] = [
+    ...soldItems,
+    ...dbActivities.filter((dbItem) => !soldItems.some((s) => s.id === dbItem.id)),
+    ...(soldItems.length === 0 && dbActivities.length === 0 ? CAMPAIGN_ANNOUNCEMENTS : [])
+  ];
 
-  // Connect to Supabase Realtime to pull live claims and donations
+  // Connect to Supabase to pull live verified claims from public_sponsors_wall
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) return;
     const client = supabase;
     let isMounted = true;
 
-    // 1. Initial fetch of claimed spots from Supabase
+    // 1. Initial fetch from sanitized public_sponsors_wall
     client
-      .from('brand_spots')
-      .select('id, name, sponsor_name, top_bid_usd, is_sold')
-      .eq('is_sold', true)
+      .from('public_sponsors_wall')
+      .select('order_id, sponsor_name, amount_cents, currency, spot_id, order_type')
+      .limit(10)
       .then(({ data, error }) => {
         if (!isMounted || error || !data || data.length === 0) return;
-        const dbItems: ActivityItem[] = data.map((d: { id: number; name?: string; sponsor_name?: string; top_bid_usd?: number }) => ({
-          id: `supabase-spot-${d.id}`,
-          sponsor: d.sponsor_name || `Spot #${d.id}`,
-          amount: `$${d.top_bid_usd || 100}`,
-          spot: d.name || `Spot #${d.id}`,
-          status: 'Secured! 🔥',
+        const verifiedItems: ActivityItem[] = data.map((d) => ({
+          id: `supabase-${d.order_id}`,
+          sponsor: d.sponsor_name,
+          amount: `${(d.amount_cents / 100).toLocaleString()} ${d.currency?.toUpperCase()}`,
+          spot: d.spot_id ? `Spot #${d.spot_id}` : 'VESPER Backer Pool',
+          status: 'Confirmed Backer! 🌟',
           isReal: true
         }));
 
-        setActivities((prev) => {
-          const filtered = prev.filter((p) => !p.id.startsWith('supabase-spot-'));
-          return [...dbItems, ...filtered];
-        });
+        setDbActivities(verifiedItems);
       });
 
-    // 2. Realtime listener for incoming claims and donations
+    // 2. Realtime listener for verified brand_spots changes
     const channel = client
-      .channel('ticker_realtime_claims')
+      .channel('ticker_verified_claims')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'brand_spots' }, (payload) => {
         if (!isMounted) return;
-        const newRecord = payload.new as { id?: number; name?: string; sponsor_name?: string; top_bid_usd?: number; is_sold?: boolean };
-        if (newRecord && newRecord.is_sold) {
+        const newRecord = payload.new as { id?: number; name?: string; sponsor_name?: string; price_usd_cents?: number; is_sold?: boolean; status?: string };
+        if (newRecord && (newRecord.is_sold || newRecord.status === 'sold')) {
           const freshItem: ActivityItem = {
             id: `live-claim-${newRecord.id}-${Date.now()}`,
             sponsor: newRecord.sponsor_name || `Spot #${newRecord.id}`,
-            amount: `$${newRecord.top_bid_usd || 100}`,
+            amount: `$${newRecord.price_usd_cents ? Math.round(newRecord.price_usd_cents / 100) : 100}`,
             spot: newRecord.name || `Spot #${newRecord.id}`,
-            status: 'Just Claimed! 🔥',
+            status: 'Verified Sponsor! 🌟',
             isReal: true
           };
 
-          setActivities((prev) => [freshItem, ...prev.filter((p) => p.id !== freshItem.id)]);
-          setCurrentIndex(0); // Immediately highlight the newly claimed spot!
-        }
-      })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'donations' }, (payload) => {
-        if (!isMounted) return;
-        const newDonation = payload.new as { amount_usd?: number; tier_name?: string };
-        if (newDonation) {
-          const freshItem: ActivityItem = {
-            id: `live-donation-${Date.now()}`,
-            sponsor: newDonation.tier_name || 'Supporter',
-            amount: `$${newDonation.amount_usd || 50}`,
-            spot: 'Founder Roadshow Pool',
-            status: 'Just Backed! 💖',
-            isReal: true
-          };
-
-          setActivities((prev) => [freshItem, ...prev]);
+          setDbActivities((prev) => [freshItem, ...prev]);
           setCurrentIndex(0);
         }
       })
@@ -130,16 +103,16 @@ export const LiveActivityTicker: React.FC<LiveActivityTickerProps> = ({ spots, o
 
   // Cycle through ticker activities
   useEffect(() => {
-    if (isPaused || activities.length === 0) return;
+    if (isPaused || combinedActivities.length === 0) return;
     const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % activities.length);
-    }, 4500);
+      setCurrentIndex((prev) => (prev + 1) % combinedActivities.length);
+    }, 5000);
     return () => clearInterval(interval);
-  }, [isPaused, activities.length]);
+  }, [isPaused, combinedActivities.length]);
 
-  if (!isVisible || activities.length === 0) return null;
+  if (!isVisible || combinedActivities.length === 0) return null;
 
-  const current = activities[currentIndex % activities.length] || activities[0];
+  const current = combinedActivities[currentIndex % combinedActivities.length] || combinedActivities[0];
   if (!current) return null;
 
   return (
@@ -151,7 +124,7 @@ export const LiveActivityTicker: React.FC<LiveActivityTickerProps> = ({ spots, o
     >
       <div className="ticker-left-pill">
         <span className="ticker-pulse-dot" />
-        <span className="ticker-badge-text">{current.isReal ? 'LIVE CLAIM' : 'FUND MY MAC'}</span>
+        <span className="ticker-badge-text">{current.isReal ? 'VERIFIED BACKER' : 'CAMPAIGN UPDATE'}</span>
       </div>
 
       <div className="ticker-content-text">

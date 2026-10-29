@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 
+export type DisplayCurrency = 'INR' | 'USD' | 'EUR';
+
 interface BrandMyMacNavbarProps {
-  currency: 'EUR' | 'USD';
-  onToggleCurrency: (c: 'EUR' | 'USD') => void;
+  currency: DisplayCurrency;
+  onToggleCurrency: (c: DisplayCurrency) => void;
   onGetSpotClick: () => void;
 }
 
@@ -60,11 +62,11 @@ export const BrandMyMacNavbar: React.FC<BrandMyMacNavbarProps> = ({
             <div role="group" aria-label="Display currency" className="bmm-currency-switch">
               <button
                 type="button"
-                onClick={() => onToggleCurrency('EUR')}
-                aria-pressed={currency === 'EUR'}
-                className={`bmm-curr-btn ${currency === 'EUR' ? 'active' : ''}`}
+                onClick={() => onToggleCurrency('INR')}
+                aria-pressed={currency === 'INR'}
+                className={`bmm-curr-btn ${currency === 'INR' ? 'active' : ''}`}
               >
-                €
+                ₹
               </button>
               <button
                 type="button"
@@ -73,6 +75,14 @@ export const BrandMyMacNavbar: React.FC<BrandMyMacNavbarProps> = ({
                 className={`bmm-curr-btn ${currency === 'USD' ? 'active' : ''}`}
               >
                 $
+              </button>
+              <button
+                type="button"
+                onClick={() => onToggleCurrency('EUR')}
+                aria-pressed={currency === 'EUR'}
+                className={`bmm-curr-btn ${currency === 'EUR' ? 'active' : ''}`}
+              >
+                €
               </button>
             </div>
 
