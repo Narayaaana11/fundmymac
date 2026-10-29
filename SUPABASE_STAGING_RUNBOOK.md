@@ -1,7 +1,8 @@
 # FUND MY MAC — SUPABASE STAGING RUNBOOK
 
 **Target Application:** Fund My Mac / VESPER Campaign  
-**Scope:** Staging Environment Setup, Database Initialization, Edge Functions Deployment, Razorpay Test Mode Verification, and Disaster Recovery
+**Scope:** Staging Environment Creation, Database Initialization, Edge Functions Deployment, Razorpay Test Mode Verification, and Disaster Recovery  
+**Document Classification:** Production Safety & Staging Operations Runbook
 
 ---
 
@@ -9,159 +10,256 @@
 
 Before starting staging initialization, ensure you have:
 1. **Node.js:** v20+ or v22+ (`node --version`).
-2. **Supabase CLI:** Installed via npx (`npx supabase --version`, tested with v2.122.0).
-3. **Supabase Access Token:** Generated in your Supabase Account Settings (`https://supabase.com/dashboard/account/tokens`).
-4. **Target Staging Project:** A dedicated Supabase project (e.g. `fundmymac-staging`). Do **NOT** use the production project reference (`lavydeusonwqjrlhtqzv`).
-5. **Razorpay Test Account:** Key ID (`rzp_test_...`), Key Secret, and Webhook Secret from the Razorpay Dashboard (Settings -> API Keys & Webhooks).
+2. **Supabase CLI:** Installed and accessible via `npx supabase` (tested with v2.122.0).
+3. **Supabase Account Access:** An active account on [https://supabase.com](https://supabase.com).
+4. **Supabase Personal Access Token:** Generated via [Supabase Dashboard -> Account -> Access Tokens](https://supabase.com/dashboard/account/tokens).
+5. **Razorpay Test Account:** Key ID (`rzp_test_...`), Key Secret, and Webhook Secret from [Razorpay Dashboard](https://dashboard.razorpay.com/) (Settings -> API Keys & Webhooks).
 
 ---
 
-## 2. Verify Target Project Reference
+## 2. Creating a Separate Staging Project via Supabase Dashboard
 
-To avoid accidental mutations against production:
+To ensure production (`lavydeusonwqjrlhtqzv`) is never touched during testing, create a dedicated staging project:
+
+1. Navigate to **[https://supabase.com/dashboard/projects](https://supabase.com/dashboard/projects)**.
+2. Click **New project** (green button, top right).
+3. Fill in project details:
+   - **Organization:** Select your existing organization.
+   - **Name:** `fundmymac-staging`
+   - **Database Password:** Click **Generate a password** and copy it into your password manager.
+   - **Region:** Select the same region as your production project (e.g., `ap-south-1` Mumbai) for low latency.
+   - **Pricing Plan:** Select **Free Tier** (or your preferred tier).
+4. Click **Create new project**.
+5. Wait ~2 minutes for project provisioning to complete.
+6. Retrieve the **Project Reference ID**:
+   - Go to **Project Settings** (gear icon) -> **General**.
+   - Copy the 20-character string under **Reference ID** (e.g. `abcdefghijklmnopqrst`).
+   - **CRITICAL:** Confirm this reference is **NOT** `lavydeusonwqjrlhtqzv`.
+
+---
+
+## 3. Strict Preflight Guard & Reference Verification
+
+Every script or manual CLI session must verify that the target project is staging, aborting immediately if pointed at production.
+
+### PowerShell Preflight Check
 ```powershell
-# Set target staging project reference
-$STAGING_PROJECT_REF = "<your-staging-project-ref>"
+# Set your staging project reference ID
+$STAGING_PROJECT_REF = "YOUR_STAGING_PROJECT_REF_HERE"
 
-# Confirm it is NOT the production project
-if ($STAGING_PROJECT_REF -eq "lavydeusonwqjrlhtqzv") {
-    Write-Error "CRITICAL SAFETY HALT: Refusing to run staging deployment against production reference lavydeusonwqjrlhtqzv!"
+# Enforce Production Safety Guard
+if (-not $STAGING_PROJECT_REF -or $STAGING_PROJECT_REF -eq "YOUR_STAGING_PROJECT_REF_HERE") {
+    Write-Error "ABORT: You must set `$STAGING_PROJECT_REF to your actual 20-character staging project reference."
     exit 1
 }
 
-Write-Host "Target Staging Reference: $STAGING_PROJECT_REF" -ForegroundColor Green
+if ($STAGING_PROJECT_REF -eq "lavydeusonwqjrlhtqzv") {
+    Write-Error "CRITICAL SECURITY HALT: Target reference matches PRODUCTION (lavydeusonwqjrlhtqzv)! Refusing to execute."
+    exit 1
+}
+
+Write-Host "✅ Target Project Verified: $STAGING_PROJECT_REF (STAGING)" -ForegroundColor Green
+```
+
+### Bash / Zsh Preflight Check
+```bash
+export STAGING_PROJECT_REF="YOUR_STAGING_PROJECT_REF_HERE"
+
+if [ -z "$STAGING_PROJECT_REF" ] || [ "$STAGING_PROJECT_REF" = "YOUR_STAGING_PROJECT_REF_HERE" ]; then
+    echo "ERROR: Set STAGING_PROJECT_REF to your staging project reference."
+    exit 1
+fi
+
+if [ "$STAGING_PROJECT_REF" = "lavydeusonwqjrlhtqzv" ]; then
+    echo "CRITICAL SECURITY HALT: Target reference matches PRODUCTION (lavydeusonwqjrlhtqzv)! Aborting."
+    exit 1
+fi
+
+echo "✅ Target Project Verified: $STAGING_PROJECT_REF (STAGING)"
 ```
 
 ---
 
-## 3. Configure CLI Authentication Securely
+## 4. Secure CLI Authentication
 
-Never commit access tokens to Git or write them to persistent files.
+Authenticate without committing tokens or printing secrets to terminal logs:
 
-In PowerShell:
+### PowerShell
 ```powershell
-# Set session-scoped environment variable (not logged to git or disk)
-$env:SUPABASE_ACCESS_TOKEN = Read-Host -Prompt "Enter Supabase Personal Access Token" -AsSecureString
-$BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($env:SUPABASE_ACCESS_TOKEN)
+# Read token securely into session environment (not saved to disk)
+$secureToken = Read-Host -Prompt "Enter Supabase Personal Access Token" -AsSecureString
+$BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureToken)
 $env:SUPABASE_ACCESS_TOKEN = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
 
-# Link CLI to the staging project
+# Link CLI directly to the staging project
+npx supabase link --project-ref $STAGING_PROJECT_REF
+```
+
+### Bash / macOS / Linux
+```bash
+read -sp "Enter Supabase Personal Access Token: " SUPABASE_ACCESS_TOKEN
+export SUPABASE_ACCESS_TOKEN
+
 npx supabase link --project-ref $STAGING_PROJECT_REF
 ```
 
 ---
 
-## 4. Initialize a Disposable or Staging Database
+## 5. Applying Migrations via Supported Supabase CLI Workflow
 
-There are two supported workflows for applying the repaired schema:
+Once linked to the staging project:
 
-### Workflow A: Supabase CLI Migration (Recommended)
-This workflow tracks migration history automatically in `supabase_migrations.schema_migrations`:
-
+### Step 5.1: Check Remote Migration Status
 ```powershell
-# Apply repaired migrations in canonical dependency order
+npx supabase migration list
+```
+*Expected output on a fresh staging project:*
+Shows the three local migrations pending (`20261029010000`, `20261029020000`, `20261029030000`) with remote status empty.
+
+### Step 5.2: Apply Migrations
+```powershell
 npx supabase db push
 ```
+The Supabase CLI connects to the linked staging database and executes the repaired migrations in canonical timestamp order:
+1. `20261029010000_secure_fundmymac_schema.sql` (Creates extensions, tables, seed inventory, views, RLS policies, functions, realtime publication).
+2. `20261029020000_razorpay_integration.sql` (Adds INR paise columns, INR canonical prices, Razorpay fields, function security definers, least-privilege permissions).
+3. `20261029030000_production_readiness_hardening.sql` (Adds refunded status, expired-reservation sweep in atomic reservation, refund workflow, operator reconciliation).
 
-The CLI applies the three migrations sequentially:
-1. `supabase/migrations/20261029010000_secure_fundmymac_schema.sql`
-2. `supabase/migrations/20261029020000_razorpay_integration.sql`
-3. `supabase/migrations/20261029030000_production_readiness_hardening.sql`
-
-### Workflow B: Supabase Dashboard SQL Editor (Consolidated Fallback)
-If direct database connectivity from your network is restricted:
-1. Open the Staging Project SQL Editor:
-   `https://supabase.com/dashboard/project/<staging-project-ref>/sql/new`
-2. Open [`supabase-setup.sql`](file:///d:/narayana/fundmymac/supabase-setup.sql) from the repository.
-3. Paste the entire file into the SQL Editor and click **Run**.
-4. Synchronize CLI migration tracking table so future `supabase db push` commands recognize the schema:
-   ```sql
-   CREATE SCHEMA IF NOT EXISTS supabase_migrations;
-   CREATE TABLE IF NOT EXISTS supabase_migrations.schema_migrations (
-       version TEXT PRIMARY KEY,
-       statements TEXT[],
-       name TEXT
-   );
-   INSERT INTO supabase_migrations.schema_migrations (version, name)
-   VALUES 
-       ('20261029010000', 'secure_fundmymac_schema'),
-       ('20261029020000', 'razorpay_integration'),
-       ('20261029030000', 'production_readiness_hardening')
-   ON CONFLICT (version) DO NOTHING;
-   ```
+### Step 5.3: Confirm CLI Migration History
+```powershell
+npx supabase migration list
+```
+*Expected output:* All three migrations marked as applied remotely.
 
 ---
 
-## 5. Verify Schema Objects & Migration History
+## 6. Read-Only Post-Deployment SQL Verification
 
-Run the following verification queries in the SQL Editor or via `npx supabase inspect db`:
+Execute this read-only audit query in the Staging Supabase Dashboard SQL Editor (`https://supabase.com/dashboard/project/<staging-ref>/sql/new`) to verify all objects:
 
 ```sql
--- 1. Verify all 4 required tables and 1 view exist in public schema
+-- =========================================================================
+-- Fund My Mac: Post-Deployment Schema & Security Audit (Read-Only)
+-- =========================================================================
+
+-- 1. Verify required tables and views in public schema
 SELECT table_name, table_type 
 FROM information_schema.tables 
 WHERE table_schema = 'public' 
 ORDER BY table_name;
--- Expected: brand_spots, payment_transactions, public_sponsors_wall (VIEW), site_stats, sponsorship_orders
+-- EXPECTED:
+-- brand_spots          | BASE TABLE
+-- payment_transactions | BASE TABLE
+-- public_sponsors_wall | VIEW
+-- site_stats           | BASE TABLE
+-- sponsorship_orders   | BASE TABLE
 
--- 2. Verify all 20 canonical spots exist with INR and USD pricing
+-- 2. Verify all 20 canonical brand spots are seeded with correct prices
 SELECT count(*) AS total_spots,
+       count(*) FILTER (WHERE status = 'available') AS available_spots,
        min(price_inr_paise) AS min_inr_paise,
-       max(price_inr_paise) AS max_inr_paise
+       max(price_inr_paise) AS max_inr_paise,
+       min(price_usd_cents) AS min_usd_cents,
+       max(price_usd_cents) AS max_usd_cents
 FROM public.brand_spots;
--- Expected: total_spots = 20, min_inr_paise = 800000 (₹8,000), max_inr_paise = 4200000 (₹42,000)
+-- EXPECTED:
+-- total_spots = 20, available_spots = 20
+-- min_inr_paise = 800000 (₹8,000), max_inr_paise = 4200000 (₹42,000)
+-- min_usd_cents = 9900 ($99), max_usd_cents = 50000 ($500)
 
 -- 3. Verify single-row site_stats initialization
-SELECT * FROM public.site_stats WHERE id = 1;
--- Expected: id=1, views>=0, spots_sold=0, total_raised_inr_paise=0
+SELECT id, views, spots_sold, total_raised_inr_paise, total_raised_usd_cents, total_raised_eur_cents 
+FROM public.site_stats 
+WHERE id = 1;
+-- EXPECTED: id = 1, views >= 0, spots_sold = 0, total_raised_inr_paise = 0
 
--- 4. Verify stored procedures have search_path = public
-SELECT proname, prosecdef, proconfig 
-FROM pg_proc 
-WHERE pronamespace = 'public'::regnamespace 
-  AND proname IN (
+-- 4. Verify RLS policies are active on all public tables
+SELECT tablename, policyname, roles, cmd 
+FROM pg_policies 
+WHERE schemaname = 'public' 
+ORDER BY tablename, policyname;
+-- EXPECTED:
+-- brand_spots          | Public read brand_spots                      | {anon,authenticated} | SELECT
+-- payment_transactions | Service role full access on payment_trans... | {service_role}       | ALL
+-- site_stats           | Public read site_stats                       | {anon,authenticated} | SELECT
+-- sponsorship_orders   | Service role full access on sponsorship_...  | {service_role}       | ALL
+
+-- 5. Verify function execution boundaries (Least-Privilege)
+SELECT 
+    p.proname,
+    has_function_privilege('anon', p.oid, 'EXECUTE') AS anon_can_execute,
+    has_function_privilege('service_role', p.oid, 'EXECUTE') AS service_role_can_execute,
+    p.prosecdef AS is_security_definer,
+    p.proconfig AS search_path_config
+FROM pg_proc p
+WHERE p.pronamespace = 'public'::regnamespace
+  AND p.proname IN (
     'atomic_reserve_spot',
     'release_expired_reservations',
     'confirm_paid_order',
     'process_order_refund',
     'reconcile_unclaimed_payment',
     'record_real_pageview'
-  );
--- Expected: prosecdef = true, proconfig contains search_path=public
+  )
+ORDER BY p.proname;
+-- EXPECTED:
+-- atomic_reserve_spot          | false | true | true | {search_path=public}
+-- confirm_paid_order           | false | true | true | {search_path=public}
+-- process_order_refund         | false | true | true | {search_path=public}
+-- reconcile_unclaimed_payment  | false | true | true | {search_path=public}
+-- record_real_pageview         | true  | true | true | {search_path=public}
+-- release_expired_reservations | false | true | true | {search_path=public}
 
--- 5. Verify CLI migration history table
+-- 6. Verify Realtime Publication inclusion
+SELECT pubname, tablename 
+FROM pg_publication_tables 
+WHERE pubname = 'supabase_realtime' AND tablename IN ('brand_spots', 'site_stats');
+-- EXPECTED: 2 rows (brand_spots, site_stats)
+
+-- 7. Verify CLI migration history
 SELECT version, name FROM supabase_migrations.schema_migrations ORDER BY version;
--- Expected: 3 rows with versions 20261029010000, 20261029020000, 20261029030000
+-- EXPECTED: 3 rows (20261029010000, 20261029020000, 20261029030000)
 ```
 
 ---
 
-## 6. Configure Edge Function Secrets Securely
+## 7. Edge Function Deployment & Secret Configuration
 
-Deploy the three serverless functions to staging:
+Deploy the serverless Edge Functions and inject Razorpay Test Mode credentials without exposing them in code:
 
 ```powershell
-# Deploy Edge Functions
+# 1. Deploy the 3 Edge Functions to staging
 npx supabase functions deploy create-razorpay-order --project-ref $STAGING_PROJECT_REF
 npx supabase functions deploy verify-razorpay-payment --project-ref $STAGING_PROJECT_REF
 npx supabase functions deploy razorpay-webhook --project-ref $STAGING_PROJECT_REF
 
-# Set Edge Function secrets securely (Use TEST mode credentials!)
+# 2. Inject Edge Function secrets securely
+# Prompt for secrets so they are not stored in shell history
+$rzpKeyId = Read-Host -Prompt "Enter Razorpay TEST Key ID (rzp_test_...)"
+$rzpKeySecret = Read-Host -Prompt "Enter Razorpay TEST Key Secret" -AsSecureString
+$rzpWebhookSecret = Read-Host -Prompt "Enter Razorpay Webhook Secret" -AsSecureString
+
+$BSTR_Secret = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($rzpKeySecret)
+$plainKeySecret = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR_Secret)
+
+$BSTR_Webhook = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($rzpWebhookSecret)
+$plainWebhookSecret = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR_Webhook)
+
 npx supabase secrets set --project-ref $STAGING_PROJECT_REF `
   ENVIRONMENT="staging" `
-  RAZORPAY_KEY_ID="rzp_test_YOUR_KEY_ID" `
-  RAZORPAY_KEY_SECRET="YOUR_RAZORPAY_TEST_SECRET" `
-  RAZORPAY_WEBHOOK_SECRET="YOUR_WEBHOOK_SECRET"
+  RAZORPAY_KEY_ID="$rzpKeyId" `
+  RAZORPAY_KEY_SECRET="$plainKeySecret" `
+  RAZORPAY_WEBHOOK_SECRET="$plainWebhookSecret"
 ```
 
 ---
 
-## 7. Configure Razorpay Test Mode Webhook
+## 8. Razorpay Test Mode Webhook Configuration
 
-1. Log in to [Razorpay Dashboard](https://dashboard.razorpay.com/) in **Test Mode**.
-2. Navigate to **Settings** -> **Webhooks** -> **Add New Webhook**.
+1. Open [Razorpay Dashboard](https://dashboard.razorpay.com/) and verify **TEST MODE** badge is active.
+2. Go to **Settings** -> **Webhooks** -> **Add New Webhook**.
 3. **Webhook URL:** `https://<staging-project-ref>.supabase.co/functions/v1/razorpay-webhook`
-4. **Secret:** Set to the exact same string as `RAZORPAY_WEBHOOK_SECRET` above.
+4. **Secret:** Paste the exact webhook secret configured in Step 7.
 5. **Active Events:**
    - `order.paid`
    - `payment.captured`
@@ -170,100 +268,62 @@ npx supabase secrets set --project-ref $STAGING_PROJECT_REF `
 
 ---
 
-## 8. Safe End-to-End Verification Procedure
+## 9. Safe End-to-End Staging Verification Test
 
-Conduct a complete customer checkout journey in Razorpay Test Mode:
-
-### Step 8.1: Test Pageview Analytics
-- Open the staging frontend.
-- Verify banner displays real analytics: Spot count `20 Available`, `0 Sold`.
-- Open network tab and verify POST to `/rest/v1/rpc/record_real_pageview` returns HTTP 200 with incremented view count.
-
-### Step 8.2: Test Spot Reservation
-- Select an available spot (e.g. Spot #4, ₹8,500).
-- Click **Claim Spot**, fill out the backer name, valid email, and test website URL.
-- Click **Proceed to Payment**.
-- Verify `create-razorpay-order` returns `200` with Razorpay order ID.
-- Verify in database:
-  ```sql
-  SELECT id, status, reserved_until, reserved_by_session_id 
-  FROM public.brand_spots WHERE id = 4;
-  ```
-  Expected: `status = 'reserved'`, `reserved_until > NOW()`.
-
-### Step 8.3: Complete Test Payment
-- In Razorpay Modal, select **Netbanking** or **UPI** -> **Success**.
-- Verify modal closes, confetti animation triggers, and confirmation dialog appears.
-- Verify database state:
-  ```sql
-  -- Spot is marked permanently sold
-  SELECT id, status, is_sold, sponsor_name FROM public.brand_spots WHERE id = 4;
-  -- Expected: status = 'sold', is_sold = true
-
-  -- Order is marked paid
-  SELECT id, status, amount_cents, currency, paid_at FROM public.sponsorship_orders WHERE spot_id = 4;
-  -- Expected: status = 'paid'
-
-  -- Payment transaction audit record exists
-  SELECT provider, event_type, status FROM public.payment_transactions WHERE order_id = (SELECT id FROM public.sponsorship_orders WHERE spot_id = 4);
-  -- Expected: provider = 'razorpay', status = 'paid'
-
-  -- Site stats reflect 1 spot sold and ₹8,500 raised
-  SELECT spots_sold, total_raised_inr_paise FROM public.site_stats WHERE id = 1;
-  -- Expected: spots_sold = 1, total_raised_inr_paise = 850000
-  ```
-
-### Step 8.4: Verify Public Sponsors Wall Sanitization
-- Query the public sponsors view:
-  ```sql
-  SELECT * FROM public.public_sponsors_wall;
-  ```
-- Confirm the new sponsor is listed and that **no private email or secrets appear** in any returned column.
+1. **Pageview Increment:**
+   - Open staging frontend URL.
+   - Verify banner shows `20 Available` spots.
+   - Network tab shows POST `/rest/v1/rpc/record_real_pageview` returning `200` and incrementing count.
+2. **Checkout & Spot Lock:**
+   - Select Spot #4 (Upper Left Mini-Strip, ₹8,500).
+   - Enter sponsor name `Acme Staging Labs`, email `test@acmestaging.internal`, and URL `https://acmestaging.internal`.
+   - Click **Claim Spot**.
+   - Verify `create-razorpay-order` returns HTTP 200 with Razorpay order ID.
+   - Verify spot #4 in database has `status = 'reserved'`.
+3. **Test Payment Completion:**
+   - In Razorpay modal, select **Netbanking** -> **Success**.
+   - Modal closes, celebration confetti triggers, confirmation dialog displays.
+   - Database confirms:
+     - Spot #4: `status = 'sold'`, `is_sold = true`, `sponsor_name = 'Acme Staging Labs'`.
+     - Order: `status = 'paid'`, `amount_cents = 850000`, `currency = 'inr'`.
+     - Audit ledger: `payment_transactions` has row with `provider = 'razorpay'`, `status = 'paid'`.
+     - `site_stats`: `spots_sold = 1`, `total_raised_inr_paise = 850000`.
+4. **Public Sponsors Wall Sanitization:**
+   - Check `SELECT * FROM public.public_sponsors_wall;`.
+   - Confirm `Acme Staging Labs` is displayed.
+   - Confirm **no email address** or private payment metadata is present in any column.
 
 ---
 
-## 9. Failure Recovery & Rollback Runbook
+## 10. Disaster Recovery & Rollback
 
-If a migration fails or encounters an unhandled exception:
+### If Migration Fails During `db push`:
+Because PostgreSQL wraps migration files in transactions, any error in a migration file aborts and rolls back that file.
+1. Check migration state:
+   ```powershell
+   npx supabase migration list --project-ref $STAGING_PROJECT_REF
+   ```
+2. Correct the failing SQL in the local migration file.
+3. Rerun `npx supabase db push`.
 
-### If using CLI `supabase db push`:
-PostgreSQL executes migrations inside transaction blocks by default. A failed statement rolls back the failed file automatically.
-1. Inspect CLI error log:
-   `npx supabase migration list --project-ref $STAGING_PROJECT_REF`
-2. Determine which migration failed.
-3. Fix the migration script in source control.
-4. Rerun `npx supabase db push`.
-
-### If using SQL Editor:
-Always wrap statements in `BEGIN ... COMMIT`:
+### Resetting Staging to Clean State:
+If staging schema needs a complete fresh start (STAGING ONLY):
 ```sql
-BEGIN;
--- Migration statements...
-COMMIT;
-```
-If an error occurs, run:
-```sql
-ROLLBACK;
-```
-
-### Resetting a Disposable Staging Database:
-If the staging schema needs a complete fresh start:
-```sql
--- DANGER: STAGING ONLY. NEVER RUN AGAINST PRODUCTION!
+-- DANGER: STAGING ONLY. NEVER EXECUTE ON PRODUCTION!
 DROP SCHEMA public CASCADE;
 CREATE SCHEMA public;
 GRANT ALL ON SCHEMA public TO postgres;
 GRANT ALL ON SCHEMA public TO public;
 ```
-Then re-apply Workflow A or Workflow B from clean baseline.
+Then re-apply migrations cleanly using `npx supabase db push`.
 
 ---
 
-## 10. Conditions Required Before Production Deployment
+## 11. Production Promotion Gate Checklist
 
-Under **no circumstances** should changes be promoted to production (`lavydeusonwqjrlhtqzv`) until:
-
-1. **Staging Parity Verified:** Full end-to-end checkout, payment confirmation, realtime broadcast, and webhook idempotency pass in the staging environment.
-2. **Production Backup Verified:** The project owner must enable or verify Supabase database backups for the production instance (`lavydeusonwqjrlhtqzv`) or take a manual schema/data dump.
-3. **Owner Approval:** Scheduled migration maintenance window approved by the campaign owner.
-4. **Live Razorpay Credentials Ready:** Live Razorpay keys and webhook secret validated with the payment provider.
+Do **NOT** deploy to production (`lavydeusonwqjrlhtqzv`) until:
+- [ ] End-to-end checkout succeeds in staging with Razorpay Test Mode.
+- [ ] Webhook signature verification and idempotency verified with mock redelivery.
+- [ ] Database backup snapshot taken and confirmed on production project `lavydeusonwqjrlhtqzv`.
+- [ ] Production maintenance window approved by repository owner.
+- [ ] Live Razorpay credentials ready to be set via `npx supabase secrets set --project-ref lavydeusonwqjrlhtqzv`.
