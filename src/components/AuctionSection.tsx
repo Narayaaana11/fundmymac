@@ -2,19 +2,20 @@ import React, { useState } from 'react';
 import type { BrandSpot } from '../data/fundMyMacData';
 import { BRAND_SPOTS } from '../data/fundMyMacData';
 import { SpotlightCard } from './SpotlightCard';
-
 import type { DisplayCurrency } from './BrandMyMacNavbar';
 
 interface AuctionSectionProps {
   currency: DisplayCurrency;
   onSpotClick: (spot: BrandSpot) => void;
+  onOpenLeaderboard?: () => void;
   spots?: BrandSpot[];
   isLiveSync?: boolean;
 }
 
 export const AuctionSection: React.FC<AuctionSectionProps> = ({
-  currency: _currency,
+  currency,
   onSpotClick,
+  onOpenLeaderboard,
   spots,
   isLiveSync = false
 }) => {
@@ -28,8 +29,15 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
     activeSpots.find((s) => s.id === 3) || BRAND_SPOTS.find((s) => s.id === 3)!  // Top Right
   ];
 
-  const formatPrice = (_eur: number, _usd: number, _inr?: number) => {
-    return 'Pricing Coming Soon';
+  const totalBidsCount = activeSpots.reduce((acc, s) => acc + s.bidCount, 0);
+
+  const formatPrice = (eur: number, usd: number, inr?: number) => {
+    if (currency === 'INR') {
+      const val = inr || Math.round(usd * 84);
+      return `₹${val.toLocaleString('en-IN')}`;
+    }
+    if (currency === 'EUR') return `${eur.toLocaleString()} €`;
+    return `$${usd.toLocaleString()}`;
   };
 
   const filteredSpots = activeSpots.filter((spot) => {
@@ -48,29 +56,43 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
         {/* Available Spots Badge */}
         <div className="bmm-spots-taken-badge">
           <span className="bmm-pulse-dot">
-            <span style={{ background: isLiveSync ? '#34c759' : '#8e8e93' }} />
-            <span style={{ background: isLiveSync ? 'rgba(52, 199, 89, 0.4)' : 'rgba(142, 142, 147, 0.4)' }} />
+            <span style={{ background: isLiveSync ? '#34c759' : '#0071e3' }} />
+            <span style={{ background: isLiveSync ? 'rgba(52, 199, 89, 0.4)' : 'rgba(0, 113, 227, 0.4)' }} />
           </span>
-          <span>· {openSpotsCount} of {activeSpots.length} Sticker Spaces Opening Soon</span>
+          <span>· {openSpotsCount} of {activeSpots.length} Sticker Spaces in Live Auction</span>
           <span className="bmm-badge-divider">|</span>
-          <span className="bmm-bids-count-pill">
-            Public Preview
+          <span className="bmm-bids-count-pill tabular-nums">
+            {totalBidsCount} {totalBidsCount === 1 ? 'bid' : 'bids'} total
           </span>
         </div>
 
-        <h2 className="bmm-auction-h2">Available Spaces on the Mac</h2>
+        <h2 className="bmm-auction-h2">The Live Auction.</h2>
         <p className="bmm-auction-desc">
-          Every space travels with us to conferences, demo days, and founder meetings. Click any space to inspect perks and join the waitlist.
+          Every space shows its current top bid. Click any spot to inspect perks and place your bid with a 20% commitment deposit.
         </p>
         <p className="bmm-auction-pricing-note">
-          Sponsorship pricing and reservation details will be announced once the campaign officially opens. Join the waitlist for priority access.
+          Starting floors from <strong>{formatPrice(125, 135, 11300)} Small</strong> ·{' '}
+          <strong>{formatPrice(200, 215, 18000)} Medium</strong> ·{' '}
+          <strong>{formatPrice(400, 430, 36000)} Marquee</strong>. Minimum outbid increment:{' '}
+          <strong>+{formatPrice(10, 10, 800)}</strong>. Outbid deposits automatically refunded in full.
         </p>
 
         {/* Featured Prime Positions SpotlightCard */}
         <SpotlightCard className="bmm-leaderboard-card" spotlightColor="rgba(0, 113, 227, 0.12)">
           <div className="bmm-leaderboard-head">
-            <h3 className="bmm-leaderboard-title">Featured Prime Positions</h3>
-            <span className="bmm-leaderboard-link">Highest IRL Visibility →</span>
+            <h3 className="bmm-leaderboard-title">Top Prime Positions</h3>
+            {onOpenLeaderboard ? (
+              <button
+                type="button"
+                onClick={onOpenLeaderboard}
+                className="bmm-leaderboard-link"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+              >
+                Full Leaderboard →
+              </button>
+            ) : (
+              <span className="bmm-leaderboard-link">Highest IRL Visibility →</span>
+            )}
           </div>
 
           <ol className="bmm-leaderboard-list">
@@ -107,7 +129,7 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
                 </span>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span className="bmm-leaderboard-amount">
+                  <span className="bmm-leaderboard-amount tabular-nums" style={{ color: '#34c759', fontWeight: 700 }}>
                     {formatPrice(spot.topBidEur, spot.topBidUsd, spot.topBidInr)}
                   </span>
                   {spot.isSold ? (
@@ -115,7 +137,7 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
                       className="bmm-sold-badge"
                       style={{ background: 'rgba(255, 69, 58, 0.12)', color: '#ff453a', borderColor: 'rgba(255, 69, 58, 0.3)' }}
                     >
-                      Claimed
+                      Sold
                     </span>
                   ) : (
                     <button
@@ -127,7 +149,7 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
                         onSpotClick(spot);
                       }}
                     >
-                      Coming Soon
+                      Bid ›
                     </button>
                   )}
                 </div>
@@ -166,10 +188,10 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
         <SpotlightCard className="bmm-bids-table-card" spotlightColor="rgba(0, 113, 227, 0.08)">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
             <h3 className="bmm-leaderboard-title">
-              All Spots Directory ({filteredSpots.length} spots shown)
+              All Spots Directory ({filteredSpots.length} spaces)
             </h3>
             <span style={{ fontSize: '12px', color: 'var(--ink-2)' }}>
-              Click any space to inspect details and join the waitlist
+              Click any spot to view live bids & place counter-bid
             </span>
           </div>
 
@@ -192,15 +214,20 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
                 <div className="bmm-spot-row-left">
                   <span className="bmm-row-num">#{spot.id}</span>
                   <div className="bmm-row-details">
-                    <span className="bmm-row-sponsor">{spot.name}</span>
+                    <span className="bmm-row-sponsor">
+                      {spot.sponsorName === 'Starting Bid Floor' || spot.sponsorName === 'Prime Marquee Floor'
+                        ? spot.name
+                        : spot.sponsorName}
+                    </span>
                     <span className="bmm-row-meta">
                       {spot.size} · {spot.dimensions} — {spot.location}
+                      {spot.bidCount > 0 && ` · ${spot.bidCount} bids`}
                     </span>
                   </div>
                 </div>
 
                 <div className="bmm-spot-row-right">
-                  <span className="bmm-leaderboard-amount">
+                  <span className="bmm-leaderboard-amount tabular-nums" style={{ color: '#34c759', fontWeight: 700 }}>
                     {formatPrice(spot.topBidEur, spot.topBidUsd, spot.topBidInr)}
                   </span>
                   {spot.isSold ? (
@@ -208,14 +235,14 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
                       className="bmm-sold-badge"
                       style={{ background: 'rgba(255, 69, 58, 0.12)', color: '#ff453a', borderColor: 'rgba(255, 69, 58, 0.3)' }}
                     >
-                      Claimed
+                      Sold
                     </span>
                   ) : (
                     <span
                       className="bmm-sold-badge"
                       style={{ background: 'rgba(52, 199, 89, 0.12)', color: '#27ae60', borderColor: 'rgba(52, 199, 89, 0.3)' }}
                     >
-                      Opening Soon
+                      {spot.bidCount > 0 ? `${spot.bidCount} bids` : 'Floor Price'}
                     </span>
                   )}
                 </div>

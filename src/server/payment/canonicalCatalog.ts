@@ -10,26 +10,27 @@
 import type { CanonicalSpot, CanonicalTier, CurrencyCode } from './types.ts';
 
 export const CANONICAL_SPOTS: Record<number, CanonicalSpot> = {
-  1: { id: 1, name: 'Top-Left Banner', surface: 'lid', priceInrPaise: 2100000, priceUsdCents: 25000, priceEurCents: 23000 },
-  2: { id: 2, name: 'Marquee — Above Apple Logo', surface: 'lid', priceInrPaise: 4200000, priceUsdCents: 50000, priceEurCents: 46000 },
-  3: { id: 3, name: 'Top-Right Banner', surface: 'lid', priceInrPaise: 2100000, priceUsdCents: 25000, priceEurCents: 23000 },
-  4: { id: 4, name: 'Upper Left Mini-Strip', surface: 'lid', priceInrPaise: 850000, priceUsdCents: 10000, priceEurCents: 9000 },
-  5: { id: 5, name: 'Upper Right Mini-Strip', surface: 'lid', priceInrPaise: 850000, priceUsdCents: 10000, priceEurCents: 9000 },
-  6: { id: 6, name: 'Mid Left Flank', surface: 'lid', priceInrPaise: 1500000, priceUsdCents: 17500, priceEurCents: 16000 },
-  7: { id: 7, name: 'Mid Right Flank', surface: 'lid', priceInrPaise: 1500000, priceUsdCents: 17500, priceEurCents: 16000 },
-  8: { id: 8, name: 'Apple Left Adjacent', surface: 'lid', priceInrPaise: 1250000, priceUsdCents: 15000, priceEurCents: 13800 },
-  9: { id: 9, name: 'Apple Right Adjacent', surface: 'lid', priceInrPaise: 1250000, priceUsdCents: 15000, priceEurCents: 13800 },
-  10: { id: 10, name: 'Lower Deck Center', surface: 'lid', priceInrPaise: 1900000, priceUsdCents: 22500, priceEurCents: 21000 },
-  11: { id: 11, name: 'Left Palm Outer Top', surface: 'inside', priceInrPaise: 850000, priceUsdCents: 10000, priceEurCents: 9000 },
-  12: { id: 12, name: 'Left Palm Outer Bottom', surface: 'inside', priceInrPaise: 850000, priceUsdCents: 10000, priceEurCents: 9000 },
-  13: { id: 13, name: 'Left Palm Inner Top', surface: 'inside', priceInrPaise: 850000, priceUsdCents: 10000, priceEurCents: 9000 },
-  14: { id: 14, name: 'Left Palm Inner Bottom', surface: 'inside', priceInrPaise: 850000, priceUsdCents: 10000, priceEurCents: 9000 },
-  15: { id: 15, name: 'Right Palm Inner Top', surface: 'inside', priceInrPaise: 850000, priceUsdCents: 10000, priceEurCents: 9000 },
-  16: { id: 16, name: 'Right Palm Inner Bottom', surface: 'inside', priceInrPaise: 850000, priceUsdCents: 10000, priceEurCents: 9000 },
-  17: { id: 17, name: 'Right Palm Outer Top', surface: 'inside', priceInrPaise: 850000, priceUsdCents: 10000, priceEurCents: 9000 },
-  18: { id: 18, name: 'Right Palm Outer Bottom', surface: 'inside', priceInrPaise: 850000, priceUsdCents: 10000, priceEurCents: 9000 },
-  19: { id: 19, name: '140W Fast Charger Body', surface: 'accessory', priceInrPaise: 1250000, priceUsdCents: 15000, priceEurCents: 13800 },
-  20: { id: 20, name: 'Magic Mouse Curved Top', surface: 'accessory', priceInrPaise: 800000, priceUsdCents: 9900, priceEurCents: 9000 }
+  // Large spots: $430 USD / 400 € / ₹36,000 INR
+  1: { id: 1, name: 'Top-Left Banner', surface: 'lid', priceInrPaise: 3600000, priceUsdCents: 43000, priceEurCents: 40000 },
+  2: { id: 2, name: 'Marquee — Above Apple Logo', surface: 'lid', priceInrPaise: 3600000, priceUsdCents: 43000, priceEurCents: 40000 },
+  3: { id: 3, name: 'Top-Right Banner', surface: 'lid', priceInrPaise: 3600000, priceUsdCents: 43000, priceEurCents: 40000 },
+  4: { id: 4, name: 'Upper Left Mini-Strip', surface: 'lid', priceInrPaise: 1130000, priceUsdCents: 13500, priceEurCents: 12500 },
+  5: { id: 5, name: 'Inner Left — Beside Logo', surface: 'lid', priceInrPaise: 1800000, priceUsdCents: 21500, priceEurCents: 20000 },
+  6: { id: 6, name: 'Inner Right — Beside Logo', surface: 'lid', priceInrPaise: 1800000, priceUsdCents: 21500, priceEurCents: 20000 },
+  7: { id: 7, name: 'Upper Right Mini-Strip', surface: 'lid', priceInrPaise: 1130000, priceUsdCents: 13500, priceEurCents: 12500 },
+  8: { id: 8, name: 'Bottom Left Strip', surface: 'lid', priceInrPaise: 1800000, priceUsdCents: 21500, priceEurCents: 20000 },
+  9: { id: 9, name: 'Bottom Center — Under Logo', surface: 'lid', priceInrPaise: 3600000, priceUsdCents: 43000, priceEurCents: 40000 },
+  10: { id: 10, name: 'Bottom Right Strip', surface: 'lid', priceInrPaise: 1800000, priceUsdCents: 21500, priceEurCents: 20000 },
+  11: { id: 11, name: 'Left Palm Outer Top', surface: 'inside', priceInrPaise: 1130000, priceUsdCents: 13500, priceEurCents: 12500 },
+  12: { id: 12, name: 'Left Palm Outer Bottom', surface: 'inside', priceInrPaise: 1130000, priceUsdCents: 13500, priceEurCents: 12500 },
+  13: { id: 13, name: 'Left Palm Inner Top', surface: 'inside', priceInrPaise: 1130000, priceUsdCents: 13500, priceEurCents: 12500 },
+  14: { id: 14, name: 'Left Palm Inner Bottom', surface: 'inside', priceInrPaise: 1130000, priceUsdCents: 13500, priceEurCents: 12500 },
+  15: { id: 15, name: 'Right Palm Inner Top', surface: 'inside', priceInrPaise: 1130000, priceUsdCents: 13500, priceEurCents: 12500 },
+  16: { id: 16, name: 'Right Palm Inner Bottom', surface: 'inside', priceInrPaise: 1130000, priceUsdCents: 13500, priceEurCents: 12500 },
+  17: { id: 17, name: 'Right Palm Outer Top', surface: 'inside', priceInrPaise: 1130000, priceUsdCents: 13500, priceEurCents: 12500 },
+  18: { id: 18, name: 'Right Palm Outer Bottom', surface: 'inside', priceInrPaise: 1130000, priceUsdCents: 13500, priceEurCents: 12500 },
+  19: { id: 19, name: '140W Fast Charger Body', surface: 'accessory', priceInrPaise: 3600000, priceUsdCents: 43000, priceEurCents: 40000 },
+  20: { id: 20, name: 'Magic Mouse Curved Top', surface: 'accessory', priceInrPaise: 1800000, priceUsdCents: 21500, priceEurCents: 20000 }
 };
 
 export const CANONICAL_TIERS: Record<string, CanonicalTier> = {
@@ -70,4 +71,23 @@ export function getCanonicalTierAmount(tierId: string, currency: CurrencyCode): 
 
 export function getMinimumDonationAmount(currency: CurrencyCode): number {
   return MIN_DONATION_BY_CURRENCY[currency] || 500;
+}
+
+/**
+ * Calculates the 20% deposit required to place an auction bid.
+ * Minimum deposit: $10 USD (1,000 cents), 10 € (1,000 cents), or ₹800 INR (80,000 paise).
+ */
+export function calculateDepositAmount(bidAmountMinorUnits: number, currency: CurrencyCode): number {
+  const minDeposit = currency === 'inr' ? 80000 : 1000;
+  const calculated = Math.round(bidAmountMinorUnits * 0.20);
+  return Math.max(calculated, minDeposit);
+}
+
+/**
+ * Calculates minimum next bid given current top bid.
+ * Increment: +$10 USD (1,000 cents), +10 € (1,000 cents), or +₹800 INR (80,000 paise).
+ */
+export function calculateMinimumNextBid(currentTopBidMinorUnits: number, currency: CurrencyCode): number {
+  const increment = currency === 'inr' ? 80000 : 1000;
+  return currentTopBidMinorUnits + increment;
 }

@@ -24,7 +24,7 @@ describe('Razorpay Payment Adapter & Canonical Pricing Enforcement', () => {
   });
 
   test('Server enforces canonical spot prices in INR (paise) and foreign currencies', async () => {
-    // Spot #1 canonical price: ₹21,000 (2,100,000 paise)
+    // Spot #1 canonical price: ₹36,000 (3,600,000 paise)
     const resInr = await adapter.createCheckoutSession({
       orderType: 'spot_sponsorship',
       spotId: 1,
@@ -36,9 +36,9 @@ describe('Razorpay Payment Adapter & Canonical Pricing Enforcement', () => {
     });
 
     assert.equal(resInr.success, true);
-    assert.equal(resInr.amountMinor, 2100000, 'Spot #1 canonical price in INR must be 2,100,000 paise (₹21,000)');
+    assert.equal(resInr.amountMinor, 3600000, 'Spot #1 canonical price in INR must be 3,600,000 paise (₹36,000)');
 
-    // Spot #2 (Marquee) canonical price: ₹42,000 (4,200,000 paise)
+    // Spot #2 (Marquee) canonical price: ₹36,000 (3,600,000 paise)
     const resMarquee = await adapter.createCheckoutSession({
       orderType: 'spot_sponsorship',
       spotId: 2,
@@ -50,9 +50,9 @@ describe('Razorpay Payment Adapter & Canonical Pricing Enforcement', () => {
     });
 
     assert.equal(resMarquee.success, true);
-    assert.equal(resMarquee.amountMinor, 4200000, 'Spot #2 (Marquee) in INR must be 4,200,000 paise (₹42,000)');
+    assert.equal(resMarquee.amountMinor, 3600000, 'Spot #2 (Marquee) in INR must be 3,600,000 paise (₹36,000)');
 
-    // Spot #3 in USD: $250.00 (25,000 cents)
+    // Spot #3 in USD: $430.00 (43,000 cents)
     const resUsd = await adapter.createCheckoutSession({
       orderType: 'spot_sponsorship',
       spotId: 3,
@@ -64,7 +64,7 @@ describe('Razorpay Payment Adapter & Canonical Pricing Enforcement', () => {
     });
 
     assert.equal(resUsd.success, true);
-    assert.equal(resUsd.amountMinor, 25000, 'Spot #3 canonical price in USD must be 25,000 cents ($250)');
+    assert.equal(resUsd.amountMinor, 43000, 'Spot #3 canonical price in USD must be 43,000 cents ($430)');
   });
 
   test('All 20 spots have immutable canonical price definitions across INR, USD, and EUR', () => {

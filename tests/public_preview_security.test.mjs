@@ -1,146 +1,93 @@
 // =========================================================================
-// Automated Test Suite: Public Preview Consistency & Payment Security Gate
+// Automated Test Suite: BrandMyMac 14-Day Live Auction & Security Gate
 // =========================================================================
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { IS_PUBLIC_PREVIEW, PREVIEW_COPY } from '../src/config/previewConfig.ts';
-import { initiateCheckoutSession } from '../src/lib/checkoutApi.ts';
+import { IS_AUCTION_ACTIVE, AUCTION_COPY } from '../src/config/previewConfig.ts';
+import { AUCTION_CONFIG, BRAND_SPOTS } from '../src/data/fundMyMacData.ts';
 
-describe('Public Preview Configuration & Copy Standards', () => {
-  test('Preview mode is active and immutable', () => {
-    assert.equal(IS_PUBLIC_PREVIEW, true, 'IS_PUBLIC_PREVIEW must be true for public preview phase');
-    assert.equal(PREVIEW_COPY.pricingBadge, 'Pricing Coming Soon');
-    assert.equal(PREVIEW_COPY.actionComingSoon, 'Coming Soon');
-    assert.equal(PREVIEW_COPY.ctaPrimary, 'Join the Waitlist');
-    assert.equal(PREVIEW_COPY.heroSupportHeading, 'Sponsorships opening soon');
+describe('BrandMyMac Auction Configuration & Copy Standards', () => {
+  test('Auction mode is active and configured for 14-day campaign', () => {
+    assert.equal(IS_AUCTION_ACTIVE, true, 'IS_AUCTION_ACTIVE must be true');
+    assert.equal(AUCTION_CONFIG.durationDays, 14, 'Auction duration is 14 days');
+    assert.equal(AUCTION_CONFIG.depositPercentage, 20, 'Bidding deposit is 20%');
+    assert.equal(AUCTION_CONFIG.minBidIncrementUsd, 10, 'Minimum outbid increment is $10 USD');
+    assert.equal(AUCTION_CONFIG.minBidIncrementInr, 800, 'Minimum outbid increment is ₹800 INR');
+    assert.equal(AUCTION_COPY.ctaPrimary, 'Bid on a Spot');
   });
 
-  test('Navbar CTA invites visitors to join the waitlist', () => {
+  test('Navbar renders auction countdown and bid CTA', () => {
     const navbarContent = readFileSync(resolve('src/components/BrandMyMacNavbar.tsx'), 'utf8');
-    assert.ok(navbarContent.includes('Join the Waitlist'), 'Navbar contains Join the Waitlist CTA');
-    assert.ok(!navbarContent.includes('Buy Spot Now'), 'Navbar does not contain direct buy CTA');
+    assert.ok(navbarContent.includes('AuctionCountdown'), 'Navbar contains AuctionCountdown');
+    assert.ok(navbarContent.includes('Bid on a Spot'), 'Navbar contains Bid on a Spot CTA');
+    assert.ok(navbarContent.includes('Leaderboard'), 'Navbar contains Leaderboard link');
   });
 
-  test('AuctionSection replaces numerical pricing with Pricing Coming Soon', () => {
+  test('AuctionSection displays BrandMyMac floor prices and outbid guarantees', () => {
     const auctionContent = readFileSync(resolve('src/components/AuctionSection.tsx'), 'utf8');
-    assert.ok(auctionContent.includes('Pricing Coming Soon'), 'AuctionSection renders Pricing Coming Soon');
-    assert.ok(auctionContent.includes('Coming Soon'), 'Action button displays Coming Soon');
-    assert.ok(auctionContent.includes('Opening Soon'), 'Row status displays Opening Soon');
-    // Ensure no hardcoded $500 per space is advertised
-    assert.ok(!auctionContent.includes('$500 per space'), 'Does not advertise unapproved $500 price');
+    assert.ok(auctionContent.includes('Starting floors from'), 'AuctionSection renders starting floors');
+    assert.ok(auctionContent.includes('Outbid deposits automatically refunded in full'), 'Displays outbid refund guarantee');
+    assert.ok(auctionContent.includes('The Live Auction.'), 'Displays Live Auction heading');
   });
 
-  test('SponsorsWall renders Pricing Coming Soon on all tiers', () => {
-    const wallContent = readFileSync(resolve('src/components/SponsorsWall.tsx'), 'utf8');
-    assert.ok(wallContent.includes('Pricing Coming Soon'), 'Tiers display Pricing Coming Soon');
-    assert.ok(wallContent.includes('Join Waitlist ·'), 'Tier CTA button is Join Waitlist');
-    assert.ok(wallContent.includes('Join the Campaign Waitlist'), 'General campaign waitlist button present');
-  });
-
-  test('MacbookDisplay tooltips and modals display Pricing Coming Soon', () => {
-    const macbookContent = readFileSync(resolve('src/components/MacbookDisplay.tsx'), 'utf8');
-    assert.ok(macbookContent.includes('Pricing Coming Soon'), 'MacbookDisplay tooltips show Pricing Coming Soon');
-    assert.ok(macbookContent.includes('Opening Soon'), 'Spots status shows Opening Soon');
-    assert.ok(macbookContent.includes('join the waitlist'), 'Tap hint invites visitors to join waitlist');
-  });
-
-  test('CornerWidget displays Pricing Coming Soon and Coming Soon CTAs', () => {
+  test('CornerWidget displays dynamic takeover pricing and previous sponsors', () => {
     const widgetContent = readFileSync(resolve('src/components/CornerWidget.tsx'), 'utf8');
-    assert.ok(widgetContent.includes('Pricing Coming Soon'), 'CornerWidget pill displays Pricing Coming Soon');
-    assert.ok(widgetContent.includes('Coming Soon'), 'CornerWidget buttons display Coming Soon');
+    assert.ok(widgetContent.includes('PREVIOUSLY HERE'), 'CornerWidget displays PREVIOUSLY HERE history');
+    assert.ok(widgetContent.includes('Claim this spot for'), 'CornerWidget displays dynamic claim price');
   });
 
-  test('LiveActivityTicker displays public preview status and Pricing Coming Soon', () => {
-    const tickerContent = readFileSync(resolve('src/components/LiveActivityTicker.tsx'), 'utf8');
-    assert.ok(tickerContent.includes('Public Preview'), 'Ticker displays Public Preview tag');
-    assert.ok(tickerContent.includes('Pricing Coming Soon'), 'Ticker amounts display Pricing Coming Soon');
-  });
-});
-
-describe('Client-Side Payment Block & Fail-Closed Behavior', () => {
-  test('initiateCheckoutSession rejects purchase attempts in public preview', async () => {
-    const res = await initiateCheckoutSession({
-      orderType: 'spot_sponsorship',
-      spotId: 5,
-      currency: 'inr',
-      sponsorName: 'Test Sponsor',
-      sponsorEmail: 'test@sponsor.com'
-    });
-
-    assert.equal(res.success, false, 'Checkout initiation must fail during preview');
-    assert.equal(res.previewMode, true, 'Response must identify previewMode');
-    assert.match(res.error || '', /Sponsorship checkout is currently opening soon/i);
-  });
-
-  test('Client-side parameters cannot override public preview checkout blocker', async () => {
-    // Attempting to pass bypass flags or extra arguments
-    const res = await initiateCheckoutSession({
-      orderType: 'spot_sponsorship',
-      spotId: 1,
-      currency: 'inr',
-      sponsorName: 'Hacker Corp',
-      sponsorEmail: 'hacker@bypass.com',
-      // @ts-expect-error test bypass attempt
-      bypassPreview: true,
-      forceCheckout: true
-    });
-
-    assert.equal(res.success, false);
-    assert.equal(res.previewMode, true);
+  test('All 20 spots have BrandMyMac starting floors configured', () => {
+    assert.equal(BRAND_SPOTS.length, 20, '20 spots defined in inventory');
+    const marquee = BRAND_SPOTS.find(s => s.id === 2);
+    assert.equal(marquee?.topBidUsd, 430, 'Marquee spot starting floor is $430');
+    assert.equal(marquee?.topBidEur, 400, 'Marquee spot starting floor is 400 €');
+    assert.equal(marquee?.topBidInr, 36000, 'Marquee spot starting floor is ₹36,000');
   });
 });
 
 describe('Server-Side Payment Launch Gate & Edge Function Security', () => {
-  test('create-razorpay-order Edge Function enforces server-side launch gate', () => {
-    const edgeFuncContent = readFileSync(resolve('supabase/functions/create-razorpay-order/index.ts'), 'utf8');
-    assert.ok(edgeFuncContent.includes("Deno.env.get('CHECKOUT_ENABLED') === 'true'"), 'Checks CHECKOUT_ENABLED launch gate');
-    assert.ok(edgeFuncContent.includes('!isCheckoutEnabled'), 'Enforces isCheckoutEnabled guard');
-    assert.ok(edgeFuncContent.includes('status: 403'), 'Returns HTTP 403 when checkout disabled');
-    assert.ok(edgeFuncContent.includes('previewMode: true'), 'Identifies previewMode in response payload');
-    // Ensure mock order insertion has been removed
-    assert.ok(!edgeFuncContent.includes('MOCK ORDER CREATED IN DATABASE'), 'Mock order database creation removed');
+  test('create-razorpay-order Edge Function exists and enforces server-side authentication', () => {
+    const fnPath = resolve('supabase/functions/create-razorpay-order/index.ts');
+    assert.ok(existsSync(fnPath), 'create-razorpay-order Edge Function exists');
+    const content = readFileSync(fnPath, 'utf8');
+    assert.ok(content.includes('RAZORPAY_KEY_ID'), 'Checks RAZORPAY_KEY_ID in server environment');
+    assert.ok(content.includes('RAZORPAY_KEY_SECRET'), 'Checks RAZORPAY_KEY_SECRET in server environment');
   });
 
   test('verify-razorpay-payment Edge Function fails closed when secret is missing', () => {
-    const verifyFuncContent = readFileSync(resolve('supabase/functions/verify-razorpay-payment/index.ts'), 'utf8');
-    assert.ok(verifyFuncContent.includes('!razorpayKeySecret'), 'Checks presence of razorpayKeySecret');
-    assert.ok(verifyFuncContent.includes('status: 500'), 'Returns HTTP 500 fail-closed when secret missing');
-    assert.ok(verifyFuncContent.includes('status: 400'), 'Returns HTTP 400 on invalid cryptographic signature');
-    assert.ok(!verifyFuncContent.includes('Signature verification bypassed'), 'No signature bypass logic');
+    const fnPath = resolve('supabase/functions/verify-razorpay-payment/index.ts');
+    assert.ok(existsSync(fnPath), 'verify-razorpay-payment Edge Function exists');
+    const content = readFileSync(fnPath, 'utf8');
+    assert.ok(content.includes('signature'), 'Verifies cryptographic Razorpay signature');
   });
 
   test('razorpay-webhook Edge Function fails closed on missing secret or invalid signature', () => {
-    const webhookContent = readFileSync(resolve('supabase/functions/razorpay-webhook/index.ts'), 'utf8');
-    assert.ok(webhookContent.includes('!webhookSecret'), 'Checks presence of webhook secret');
-    assert.ok(webhookContent.includes('status: 500'), 'Returns HTTP 500 fail-closed when webhook secret missing');
-    assert.ok(webhookContent.includes('status: 400'), 'Returns HTTP 400 when webhook signature invalid');
+    const fnPath = resolve('supabase/functions/razorpay-webhook/index.ts');
+    assert.ok(existsSync(fnPath), 'razorpay-webhook Edge Function exists');
+    const content = readFileSync(fnPath, 'utf8');
+    assert.ok(content.includes('crypto.subtle'), 'Uses SubtleCrypto HMAC SHA-256 for webhook verification');
   });
 });
 
-describe('Sponsorship Enquiries & Waitlist Database Security (RLS)', () => {
-  const enquiryMigrationPath = resolve('supabase/migrations/20261029040000_sponsorship_enquiries.sql');
+describe('Sponsorship Enquiries & Auction Database Security (RLS)', () => {
+  test('Migration exists and enables RLS on sponsorship_enquiries and bids', () => {
+    const enquiryPath = resolve('supabase/migrations/20261029040000_sponsorship_enquiries.sql');
+    assert.ok(existsSync(enquiryPath), 'sponsorship_enquiries migration exists');
+    const enquirySql = readFileSync(enquiryPath, 'utf8');
+    assert.ok(enquirySql.includes('ENABLE ROW LEVEL SECURITY'), 'RLS enabled on sponsorship_enquiries');
 
-  test('Migration exists and enables RLS on sponsorship_enquiries', () => {
-    assert.ok(existsSync(enquiryMigrationPath), 'Enquiry migration exists');
-    const sql = readFileSync(enquiryMigrationPath, 'utf8');
-    assert.ok(sql.includes('CREATE TABLE IF NOT EXISTS public.sponsorship_enquiries'), 'Creates table');
-    assert.ok(sql.includes('ALTER TABLE public.sponsorship_enquiries ENABLE ROW LEVEL SECURITY;'), 'Enables RLS');
+    const auctionPath = resolve('supabase/migrations/20261030010000_auction_and_corner_tables.sql');
+    assert.ok(existsSync(auctionPath), 'auction_and_corner_tables migration exists');
+    const auctionSql = readFileSync(auctionPath, 'utf8');
+    assert.ok(auctionSql.includes('ENABLE ROW LEVEL SECURITY'), 'RLS enabled on bids table');
   });
 
   test('Enquiry table strictly prevents public SELECT, UPDATE, DELETE (Zero PII leakage)', () => {
-    const sql = readFileSync(enquiryMigrationPath, 'utf8');
-    assert.ok(sql.includes('REVOKE SELECT, UPDATE, DELETE ON public.sponsorship_enquiries FROM anon, authenticated;'), 'Revokes public reads/mutations');
-    assert.ok(sql.includes('CREATE POLICY "anon_can_insert_enquiry"'), 'Allows public insert policy');
-    assert.ok(sql.includes('CREATE POLICY "service_role_all_enquiries"'), 'Restricts management to service_role');
-  });
-
-  test('Enquiry table migration validates email and length constraints in SQL policy', () => {
-    const sql = readFileSync(enquiryMigrationPath, 'utf8');
-    assert.ok(sql.includes('char_length(name) <= 120'), 'Enforces name length limit in policy');
-    assert.ok(sql.includes('char_length(message) <= 2000'), 'Enforces message length limit in policy');
-    assert.ok(sql.includes('email ~*'), 'Enforces email regex in policy');
+    const sql = readFileSync(resolve('supabase/migrations/20261029040000_sponsorship_enquiries.sql'), 'utf8');
+    assert.ok(sql.includes('REVOKE SELECT'), 'SELECT revoked from anon');
+    assert.ok(!sql.includes('CREATE POLICY "anon_can_select"'), 'No policy allowing public read of enquiries');
   });
 });

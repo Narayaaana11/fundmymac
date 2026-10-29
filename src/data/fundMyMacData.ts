@@ -17,6 +17,16 @@ export interface BrandSpot {
   gridRow?: string;
 }
 
+export const AUCTION_CONFIG = {
+  durationDays: 14,
+  minBidIncrementUsd: 10,
+  minBidIncrementEur: 10,
+  minBidIncrementInr: 800,
+  depositPercentage: 20,
+  // 14-day auction starting from current campaign launch
+  auctionEndTime: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
+};
+
 export interface StartupEvent {
   id: string;
   name: string;
@@ -220,10 +230,11 @@ export const BRAND_SPOTS: BrandSpot[] = [
     dimensions: '9.5 × 5.5 cm',
     location: 'Top left exterior lid',
     surface: 'lid',
-    topBidEur: 230,
-    topBidUsd: 250,
+    topBidEur: 400,
+    topBidUsd: 430,
+    topBidInr: 36000,
     bidCount: 0,
-    sponsorName: 'Available · Claim Spot',
+    sponsorName: 'Starting Bid Floor',
     sponsorUrl: '#',
     isSold: false,
     gridColumn: '1 / span 2',
@@ -236,10 +247,11 @@ export const BRAND_SPOTS: BrandSpot[] = [
     dimensions: '9.5 × 5.5 cm',
     location: 'Prime center position above Apple logo',
     surface: 'lid',
-    topBidEur: 460,
-    topBidUsd: 500,
+    topBidEur: 400,
+    topBidUsd: 430,
+    topBidInr: 36000,
     bidCount: 0,
-    sponsorName: 'Prime Marquee · Available',
+    sponsorName: 'Prime Marquee Floor',
     sponsorUrl: '#',
     isSold: false,
     gridColumn: '3 / span 2',
@@ -252,10 +264,11 @@ export const BRAND_SPOTS: BrandSpot[] = [
     dimensions: '9.5 × 5.5 cm',
     location: 'Top right exterior lid',
     surface: 'lid',
-    topBidEur: 230,
-    topBidUsd: 250,
+    topBidEur: 400,
+    topBidUsd: 430,
+    topBidInr: 36000,
     bidCount: 0,
-    sponsorName: 'Available · Claim Spot',
+    sponsorName: 'Starting Bid Floor',
     sponsorUrl: '#',
     isSold: false,
     gridColumn: '5 / span 2',
@@ -268,10 +281,11 @@ export const BRAND_SPOTS: BrandSpot[] = [
     dimensions: '4.75 × 3 cm',
     location: 'Upper left corner',
     surface: 'lid',
-    topBidEur: 90,
-    topBidUsd: 100,
+    topBidEur: 125,
+    topBidUsd: 135,
+    topBidInr: 11300,
     bidCount: 0,
-    sponsorName: 'Available · Claim Spot',
+    sponsorName: 'Starting Bid Floor',
     sponsorUrl: '#',
     isSold: false,
     gridColumn: '1',
@@ -284,10 +298,11 @@ export const BRAND_SPOTS: BrandSpot[] = [
     dimensions: '4.75 × 5.5 cm',
     location: 'Left side of Apple logo',
     surface: 'lid',
-    topBidEur: 160,
-    topBidUsd: 175,
+    topBidEur: 200,
+    topBidUsd: 215,
+    topBidInr: 18000,
     bidCount: 0,
-    sponsorName: 'Available · Claim Spot',
+    sponsorName: 'Starting Bid Floor',
     sponsorUrl: '#',
     isSold: false,
     gridColumn: '2',
@@ -300,10 +315,11 @@ export const BRAND_SPOTS: BrandSpot[] = [
     dimensions: '4.75 × 5.5 cm',
     location: 'Right side of Apple logo',
     surface: 'lid',
-    topBidEur: 160,
-    topBidUsd: 175,
+    topBidEur: 200,
+    topBidUsd: 215,
+    topBidInr: 18000,
     bidCount: 0,
-    sponsorName: 'Available · Claim Spot',
+    sponsorName: 'Starting Bid Floor',
     sponsorUrl: '#',
     isSold: false,
     gridColumn: '5',
@@ -316,10 +332,11 @@ export const BRAND_SPOTS: BrandSpot[] = [
     dimensions: '4.75 × 3 cm',
     location: 'Upper right corner',
     surface: 'lid',
-    topBidEur: 90,
-    topBidUsd: 100,
+    topBidEur: 125,
+    topBidUsd: 135,
+    topBidInr: 11300,
     bidCount: 0,
-    sponsorName: 'Available · Claim Spot',
+    sponsorName: 'Starting Bid Floor',
     sponsorUrl: '#',
     isSold: false,
     gridColumn: '6',
@@ -332,10 +349,11 @@ export const BRAND_SPOTS: BrandSpot[] = [
     dimensions: '9.5 × 5.5 cm',
     location: 'Bottom left strip',
     surface: 'lid',
-    topBidEur: 160,
-    topBidUsd: 175,
+    topBidEur: 200,
+    topBidUsd: 215,
+    topBidInr: 18000,
     bidCount: 0,
-    sponsorName: 'Available · Claim Spot',
+    sponsorName: 'Starting Bid Floor',
     sponsorUrl: '#',
     isSold: false,
     gridColumn: '1 / span 2',
@@ -348,10 +366,11 @@ export const BRAND_SPOTS: BrandSpot[] = [
     dimensions: '9.5 × 5.5 cm',
     location: 'Directly below Apple logo',
     surface: 'lid',
-    topBidEur: 275,
-    topBidUsd: 300,
+    topBidEur: 400,
+    topBidUsd: 430,
+    topBidInr: 36000,
     bidCount: 0,
-    sponsorName: 'Available · Claim Spot',
+    sponsorName: 'Starting Bid Floor',
     sponsorUrl: '#',
     isSold: false,
     gridColumn: '3 / span 2',
@@ -364,10 +383,11 @@ export const BRAND_SPOTS: BrandSpot[] = [
     dimensions: '9.5 × 5.5 cm',
     location: 'Bottom right strip',
     surface: 'lid',
-    topBidEur: 160,
-    topBidUsd: 175,
+    topBidEur: 200,
+    topBidUsd: 215,
+    topBidInr: 18000,
     bidCount: 0,
-    sponsorName: 'Available · Claim Spot',
+    sponsorName: 'Starting Bid Floor',
     sponsorUrl: '#',
     isSold: false,
     gridColumn: '5 / span 2',
@@ -382,10 +402,11 @@ export const BRAND_SPOTS: BrandSpot[] = [
     dimensions: '4.5 × 3 cm',
     location: 'Left palm rest (Outer Top)',
     surface: 'inside',
-    topBidEur: 70,
-    topBidUsd: 75,
+    topBidEur: 125,
+    topBidUsd: 135,
+    topBidInr: 11300,
     bidCount: 0,
-    sponsorName: 'Available · Claim Spot',
+    sponsorName: 'Starting Bid Floor',
     sponsorUrl: '#',
     isSold: false
   },
@@ -396,10 +417,11 @@ export const BRAND_SPOTS: BrandSpot[] = [
     dimensions: '4.5 × 3 cm',
     location: 'Left palm rest (Outer Bottom)',
     surface: 'inside',
-    topBidEur: 70,
-    topBidUsd: 75,
+    topBidEur: 125,
+    topBidUsd: 135,
+    topBidInr: 11300,
     bidCount: 0,
-    sponsorName: 'Available · Claim Spot',
+    sponsorName: 'Starting Bid Floor',
     sponsorUrl: '#',
     isSold: false
   },
@@ -410,10 +432,11 @@ export const BRAND_SPOTS: BrandSpot[] = [
     dimensions: '4.5 × 3 cm',
     location: 'Left palm rest (Inner Top)',
     surface: 'inside',
-    topBidEur: 70,
-    topBidUsd: 75,
+    topBidEur: 125,
+    topBidUsd: 135,
+    topBidInr: 11300,
     bidCount: 0,
-    sponsorName: 'Available · Claim Spot',
+    sponsorName: 'Starting Bid Floor',
     sponsorUrl: '#',
     isSold: false
   },
@@ -424,10 +447,11 @@ export const BRAND_SPOTS: BrandSpot[] = [
     dimensions: '4.5 × 3 cm',
     location: 'Left palm rest (Inner Bottom)',
     surface: 'inside',
-    topBidEur: 70,
-    topBidUsd: 75,
+    topBidEur: 125,
+    topBidUsd: 135,
+    topBidInr: 11300,
     bidCount: 0,
-    sponsorName: 'Available · Claim Spot',
+    sponsorName: 'Starting Bid Floor',
     sponsorUrl: '#',
     isSold: false
   },
@@ -438,10 +462,11 @@ export const BRAND_SPOTS: BrandSpot[] = [
     dimensions: '4.5 × 3 cm',
     location: 'Right palm rest (Inner Top)',
     surface: 'inside',
-    topBidEur: 70,
-    topBidUsd: 75,
+    topBidEur: 125,
+    topBidUsd: 135,
+    topBidInr: 11300,
     bidCount: 0,
-    sponsorName: 'Available · Claim Spot',
+    sponsorName: 'Starting Bid Floor',
     sponsorUrl: '#',
     isSold: false
   },
@@ -452,10 +477,11 @@ export const BRAND_SPOTS: BrandSpot[] = [
     dimensions: '4.5 × 3 cm',
     location: 'Right palm rest (Inner Bottom)',
     surface: 'inside',
-    topBidEur: 70,
-    topBidUsd: 75,
+    topBidEur: 125,
+    topBidUsd: 135,
+    topBidInr: 11300,
     bidCount: 0,
-    sponsorName: 'Available · Claim Spot',
+    sponsorName: 'Starting Bid Floor',
     sponsorUrl: '#',
     isSold: false
   },
@@ -466,10 +492,11 @@ export const BRAND_SPOTS: BrandSpot[] = [
     dimensions: '4.5 × 3 cm',
     location: 'Right palm rest (Outer Top)',
     surface: 'inside',
-    topBidEur: 70,
-    topBidUsd: 75,
+    topBidEur: 125,
+    topBidUsd: 135,
+    topBidInr: 11300,
     bidCount: 0,
-    sponsorName: 'Available · Claim Spot',
+    sponsorName: 'Starting Bid Floor',
     sponsorUrl: '#',
     isSold: false
   },
@@ -480,10 +507,11 @@ export const BRAND_SPOTS: BrandSpot[] = [
     dimensions: '4.5 × 3 cm',
     location: 'Right palm rest (Outer Bottom)',
     surface: 'inside',
-    topBidEur: 70,
-    topBidUsd: 75,
+    topBidEur: 125,
+    topBidUsd: 135,
+    topBidInr: 11300,
     bidCount: 0,
-    sponsorName: 'Available · Claim Spot',
+    sponsorName: 'Starting Bid Floor',
     sponsorUrl: '#',
     isSold: false
   },
@@ -496,10 +524,11 @@ export const BRAND_SPOTS: BrandSpot[] = [
     dimensions: '7.5 × 7.5 cm',
     location: 'Apple 140W Fast Charger Body',
     surface: 'accessory',
-    topBidEur: 138,
-    topBidUsd: 150,
+    topBidEur: 400,
+    topBidUsd: 430,
+    topBidInr: 36000,
     bidCount: 0,
-    sponsorName: 'Available · Claim Spot',
+    sponsorName: 'Starting Bid Floor',
     sponsorUrl: '#',
     isSold: false
   },
@@ -510,57 +539,97 @@ export const BRAND_SPOTS: BrandSpot[] = [
     dimensions: '5.5 × 3.5 cm',
     location: 'Apple Magic Mouse Curved Top',
     surface: 'accessory',
-    topBidEur: 90,
-    topBidUsd: 99,
+    topBidEur: 200,
+    topBidUsd: 215,
+    topBidInr: 18000,
     bidCount: 0,
-    sponsorName: 'Available · Claim Spot',
+    sponsorName: 'Starting Bid Floor',
     sponsorUrl: '#',
     isSold: false
   }
 ];
 
-export const CORNER_DATA = {
-  currentSponsor: 'Your Brand Here',
-  amountEur: 25,
-  amountUsd: 25,
-  nextBidEur: 35,
-  nextBidUsd: 35,
+export interface CornerHistoryItem {
+  name: string;
+  amountUsd: number;
+  amountInr: number;
+  amountEur: number;
+  held: string;
+  url: string;
+  avatarUrl?: string;
+}
+
+export interface CornerState {
+  currentSponsor: string;
+  currentUrl: string;
+  amountEur: number;
+  amountUsd: number;
+  amountInr: number;
+  nextBidEur: number;
+  nextBidUsd: number;
+  nextBidInr: number;
+  avatarUrl: string;
+  heldDuration: string;
+  history: CornerHistoryItem[];
+}
+
+export const CORNER_DATA: CornerState = {
+  currentSponsor: 'VESPER AI',
+  currentUrl: 'https://vesper.ai',
+  amountEur: 30,
+  amountUsd: 35,
+  amountInr: 2800,
+  nextBidEur: 40,
+  nextBidUsd: 45,
+  nextBidInr: 3600,
   avatarUrl: '/logo-small.png',
-  history: []
+  heldDuration: '3d',
+  history: [
+    {
+      name: 'masterhooks.com',
+      amountUsd: 25,
+      amountEur: 20,
+      amountInr: 2100,
+      held: '2d · $25',
+      url: 'https://masterhooks.com',
+      avatarUrl: '/logo-small.png'
+    },
+    {
+      name: 'kunopilot.com',
+      amountUsd: 15,
+      amountEur: 12,
+      amountInr: 1250,
+      held: '18h · $15',
+      url: 'https://kunopilot.com',
+      avatarUrl: '/logo-small.png'
+    }
+  ]
 };
 
 export const FAQ_DATA = [
   {
-    question: 'When will sponsorships officially open?',
-    answer: 'Fund My Mac is currently in public preview while our Razorpay merchant verification is being completed. You can browse all available spaces and join the priority waitlist today. Waitlist members will receive early access before public checkout officially opens.'
+    question: 'How does the 14-Day Auction work?',
+    answer: 'Every spot on the MacBook Pro (lid, palm rests, and accessories) starts at a floor price ($135 Small, $215 Medium, $430 Marquee). Brands compete by placing higher bids (minimum +$10 / +₹800 increment). The highest bid when the 14-day countdown expires wins the spot permanently for the lifetime of the machine.'
   },
   {
-    question: 'Is there a limit on the fundraising budget? What happens to extra funds raised?',
-    answer: 'There is NO limit or cap on our budget! The $3,999 hardware target is our initial Phase 1 milestone to get back to building immediately. Every single dollar raised beyond the hardware cost is invested directly into building, training, and expanding the VESPER AI startup — financing cloud GPU compute clusters (NVIDIA H100/A100 SXM5), fine-tuning domain models, hosting production agent infrastructure, and funding our travel to demo days and startup conferences where our sponsors are showcased live.'
+    question: 'How does the 20% deposit work?',
+    answer: 'When placing a bid, you only pay a 20% commitment deposit via card/UPI (minimum $10 / ₹800). If another brand outbids you, your 20% deposit is immediately refunded in full automatically. If you win at the end of the auction, your deposit counts toward the total and you receive a payment link for the remaining 80% balance.'
+  },
+  {
+    question: 'What happens if someone outbids me?',
+    answer: 'Your 20% deposit is refunded back to your card instantly, and you receive an alert giving you the option to swing back with a higher bid before the 14-day timer expires.'
+  },
+  {
+    question: 'What is The Corner Takeover?',
+    answer: 'The sticky corner widget at the top-left of every page view can be claimed dynamically by any sponsor. Outbid the current holder by $10 / ₹800 to take over the corner immediately. Even if outbid later, you permanently remain on the "Previously here" sponsor history list.'
   },
   {
     question: 'Which machine are you purchasing?',
     answer: 'The MacBook Pro 16″ configured with Apple M5 Max / M5 Pro, 128GB of unified memory, and a 2TB high-speed SSD. This machine provides the extreme unified memory bandwidth and local tensor performance required to run and evaluate VESPER autonomous AI agents offline, in transit, and on stage without thermal slowdowns.'
   },
   {
-    question: 'Why are you raising funds for a MacBook Pro instead of normal VC fundraising?',
-    answer: 'Our development laptop (ASUS TUF F15) suffered a fatal motherboard short-circuit right in the middle of core engineering on VESPER. Taking dilutive venture capital just to purchase hardware doesn\'t make sense for early-stage founders. Instead, we are offering high-value IRL and digital marketing to tech companies and sponsors who want to get seen in the startup world.'
-  },
-  {
     question: 'Where will my brand / logo be displayed IRL?',
     answer: 'Everywhere this machine goes! We attend startup summits (TechCrunch Disrupt, Web Summit), AI developer hackathons, Silicon Valley & Bangalore demo days, investor meetings, and daily build-in-public cafes. Your brand sticker is prominently positioned facing founders, engineers, and VCs.'
-  },
-  {
-    question: 'What is VESPER?',
-    answer: 'VESPER is an autonomous AI developer & cognitive workspace built to empower founders and engineers to design, build, and deploy high-performance applications with superhuman speed.'
-  },
-  {
-    question: 'Will our company be listed on your official Sponsors Page?',
-    answer: 'Yes! All backers and sponsors receive a permanent feature on our official Fund My Mac Sponsors Wall as well as the VESPER website with your company name, logo, description, and dofollow backlink.'
-  },
-  {
-    question: 'Can we send physical swag or have our product showcased during meetings?',
-    answer: 'Absolutely! For our Palm Rest, Lid, and Title partners, we actively test, demo, and showcase your software tools and products during pitch sessions and technical meetups.'
   },
   {
     question: 'How do you guarantee quality and durability of the stickers?',
@@ -569,9 +638,5 @@ export const FAQ_DATA = [
   {
     question: 'How long will our brand sticker stay on the MacBook Pro?',
     answer: 'Device Lifelong: Guaranteed for the entire operational and physical lifetime of the MacBook Pro. Your sticker will remain permanently affixed across every roadshow, developer conference, investor meeting, and daily engineering build-in-public session for the full life of the machine.'
-  },
-  {
-    question: 'What payment methods do you support?',
-    answer: 'We support instant Razorpay Checkout (UPI, Credit/Debit Cards, NetBanking, Wallets), and direct Backer pledges.'
   }
 ];

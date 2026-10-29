@@ -87,11 +87,14 @@ describe('Database Security & Row-Level Security (RLS) Policies', () => {
 
   test('Migration filenames use 14-digit timestamps and sort in dependency order', () => {
     const files = readdirSync('supabase/migrations').filter(f => f.endsWith('.sql')).sort();
-    assert.equal(files.length, 4, 'Four versioned migration files exist');
+    assert.equal(files.length >= 4, true, 'Versioned migration files exist');
     assert.match(files[0], /^\d{14}_secure_fundmymac_schema\.sql$/, 'First migration is baseline schema with 14-digit timestamp');
     assert.match(files[1], /^\d{14}_razorpay_integration\.sql$/, 'Second migration is razorpay integration with 14-digit timestamp');
     assert.match(files[2], /^\d{14}_production_readiness_hardening\.sql$/, 'Third migration is production hardening with 14-digit timestamp');
     assert.match(files[3], /^\d{14}_sponsorship_enquiries\.sql$/, 'Fourth migration is sponsorship enquiries with 14-digit timestamp');
+    if (files[4]) {
+      assert.match(files[4], /^\d{14}_auction_and_corner_tables\.sql$/, 'Fifth migration is auction and corner tables with 14-digit timestamp');
+    }
   });
 
   test('Sponsorship enquiries table is protected by strict RLS and zero public SELECT', () => {

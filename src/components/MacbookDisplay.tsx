@@ -34,7 +34,7 @@ const getInsideSpotPosition = (id: number) => {
 };
 
 export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
-  currency: _currency,
+  currency,
   onSpotClick,
   spots
 }) => {
@@ -71,8 +71,13 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
     return previewTargetSpotId === spotId;
   };
 
-  const formatPrice = (_eur: number, _usd: number, _inr?: number) => {
-    return 'Pricing Coming Soon';
+  const formatPrice = (eur: number, usd: number, inr?: number) => {
+    if (currency === 'INR') {
+      const val = inr || Math.round(usd * 84);
+      return `₹${val.toLocaleString('en-IN')}`;
+    }
+    if (currency === 'EUR') return `${eur.toLocaleString()} €`;
+    return `$${usd.toLocaleString()}`;
   };
 
   // Cursor-based 3D tilt handler

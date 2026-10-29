@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AuctionCountdown } from './AuctionCountdown';
 
 export type DisplayCurrency = 'INR' | 'USD' | 'EUR';
 
@@ -6,21 +7,23 @@ interface BrandMyMacNavbarProps {
   currency: DisplayCurrency;
   onToggleCurrency: (c: DisplayCurrency) => void;
   onGetSpotClick: () => void;
+  onOpenLeaderboard?: () => void;
 }
 
 export const BrandMyMacNavbar: React.FC<BrandMyMacNavbarProps> = ({
   currency,
   onToggleCurrency,
-  onGetSpotClick
+  onGetSpotClick,
+  onOpenLeaderboard
 }) => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   const navLinks = [
+    { label: 'The Auction', href: '#spots' },
     { label: 'The Machine', href: '#macbook-showcase' },
+    { label: 'The Corner', href: '#corner' },
     { label: 'The Mission', href: '#vesper-mission' },
     { label: 'IRL Events', href: '#events' },
-    { label: 'Sponsors Wall', href: '#sponsors' },
-    { label: 'Tiers', href: '#sponsor-tiers' },
     { label: 'FAQ', href: '#faq' }
   ];
 
@@ -48,6 +51,11 @@ export const BrandMyMacNavbar: React.FC<BrandMyMacNavbarProps> = ({
             </span>
           </a>
 
+          {/* Desktop Countdown Pill */}
+          <div className="bmm-nav-countdown-wrap">
+            <AuctionCountdown compact />
+          </div>
+
           {/* Desktop Center links */}
           <div className="bmm-nav-links">
             {navLinks.map((link) => (
@@ -55,6 +63,24 @@ export const BrandMyMacNavbar: React.FC<BrandMyMacNavbarProps> = ({
                 {link.label}
               </a>
             ))}
+            {onOpenLeaderboard && (
+              <button
+                type="button"
+                onClick={onOpenLeaderboard}
+                className="bmm-nav-leaderboard-btn"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--ink-2)',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  padding: 0
+                }}
+              >
+                Leaderboard 🏆
+              </button>
+            )}
           </div>
 
           {/* Right side currency & CTA */}
@@ -91,7 +117,7 @@ export const BrandMyMacNavbar: React.FC<BrandMyMacNavbarProps> = ({
               onClick={onGetSpotClick}
               className="bmm-btn-get-spot"
             >
-              Join the Waitlist
+              Bid on a Spot
             </button>
 
             {/* Mobile Hamburger Toggle Button */}

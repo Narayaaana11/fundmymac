@@ -1,28 +1,32 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { BrandSpot } from '../data/fundMyMacData';
-import { initiateCheckoutSession } from '../lib/checkoutApi';
 import { validateLogoFile } from '../server/payment/assetValidator';
-import { submitSponsorshipEnquiry } from '../lib/enquiryApi';
-
+import { loadRazorpayScript } from '../lib/checkoutApi';
 import type { DisplayCurrency } from './BrandMyMacNavbar';
 
 interface BidModalProps {
   spot: BrandSpot | null;
   currency: DisplayCurrency;
   onClose: () => void;
-  onConfirmBid?: (
+  onBidPlaced?: (
     spotId: number,
-    brandName: string,
-    websiteUrl: string,
-    logoUrl?: string,
-    amountUsd?: number,
-    amountEur?: number
+    bidData: {
+      brandName: string;
+      websiteUrl: string;
+      email: string;
+      logoUrl?: string;
+      bidAmount: number;
+      depositAmount: number;
+      currency: DisplayCurrency;
+    }
   ) => void;
 }
 
 export const BidModal: React.FC<BidModalProps> = ({
   spot,
-  onClose
+  currency,
+  onClose,
+  onBidPlaced
 }) => {
   const [brandName, setBrandName] = useState('');
   const [websiteUrl, setWebsiteUrl] = useState('');
@@ -30,9 +34,36 @@ export const BidModal: React.FC<BidModalProps> = ({
   const [logoPreview, setLogoPreview] = useState<string>('');
   const [logoError, setLogoError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Currency specific floor & increments
+  const currentTopBid = !spot
+    ? 0
+    : currency === 'INR'
+    ? spot.topBidInr || Math.round(spot.topBidUsd * 84)
+    : currency === 'EUR'
+    ? spot.topBidEur
+    : spot.topBidUsd;
+
+  const minIncrement = currency === 'INR' ? 800 : 10;
+  const minRequiredBid = spot && spot.bidCount > 0 ? currentTopBid + minIncrement : currentTopBid;
+
+  const [bidAmount, setBidAmount] = useState<number>(minRequiredBid);
+
+  // Sync bid amount when spot or currency changes
+  useEffect(() => {
+    if (spot) {
+      const top =
+        currency === 'INR'
+          ? spot.topBidInr || Math.round(spot.topBidUsd * 84)
+          : currency === 'EUR'
+          ? spot.topBidEur
+          : spot.topBidUsd;
+      setBidAmount(spot.bidCount > 0 ? top + minIncrement : top);
+    }
+  }, [spot, currency, minIncrement]);
 
   useEffect(() => {
     if (!spot) return;
@@ -48,6 +79,18 @@ export const BidModal: React.FC<BidModalProps> = ({
   }, [spot, onClose]);
 
   if (!spot) return null;
+
+  // 20% deposit calculation (minimum $10 / 10 € / ₹800)
+  const depositPercent = 0.2;
+  const minDeposit = currency === 'INR' ? 800 : 10;
+  const calculatedDeposit = Math.max(Math.round(bidAmount * depositPercent), minDeposit);
+  const remainingBalance = Math.max(bidAmount - calculatedDeposit, 0);
+
+  const formatCurrency = (val: number) => {
+    if (currency === 'INR') return `₹${val.toLocaleString('en-IN')}`;
+    if (currency === 'EUR') return `${val.toLocaleString()} €`;
+    return `$${val.toLocaleString()}`;
+  };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLogoError(null);
@@ -70,50 +113,107 @@ export const BidModal: React.FC<BidModalProps> = ({
     reader.readAsDataURL(file);
   };
 
-  const handleWaitlistSubmit = async (e: React.FormEvent) => {
+  const handleBidSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
+
+    if (bidAmount < minRequiredBid) {
+      setErrorMessage(`Bid must be at least ${formatCurrency(minRequiredBid)} (Current top bid + minimum increment).`);
+      return;
+    }
 
     if (!brandName.trim()) {
       setErrorMessage('Please enter your company or brand name.');
       return;
     }
 
+    if (!websiteUrl.trim() || !websiteUrl.includes('.')) {
+      setErrorMessage('A valid website URL is required (e.g. https://yourstartup.com).');
+      return;
+    }
+
     if (!email.trim() || !email.includes('@')) {
-      setErrorMessage('A valid contact email is required to receive priority waitlist notifications.');
+      setErrorMessage('A valid contact email is required to receive outbid alerts and final settlement links.');
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const res = await submitSponsorshipEnquiry({
-        name: brandName.trim(),
-        email: email.trim(),
-        preferredSpotId: spot.id,
-        websiteUrl: websiteUrl.trim() || undefined
-      });
+      const isScriptLoaded = await loadRazorpayScript();
+      const testKey =
+        (typeof import.meta !== 'undefined' && import.meta.env?.VITE_RAZORPAY_KEY_ID) ||
+        'rzp_test_public_preview';
 
-      if (!res.success) {
-        setErrorMessage(res.error || 'Failed to submit waitlist enquiry. Please try again.');
-        setIsSubmitting(false);
-        return;
+      const depositMinorUnits = currency === 'INR' ? calculatedDeposit * 100 : calculatedDeposit * 100;
+
+      if (isScriptLoaded && window.Razorpay && testKey && !testKey.includes('public_preview')) {
+        // Live Razorpay popup for 20% deposit
+        const rzp = new window.Razorpay({
+          key: testKey,
+          amount: depositMinorUnits,
+          currency: currency.toUpperCase(),
+          name: 'Fund My Mac · Auction Bid Deposit',
+          description: `20% Deposit for Spot #${spot.id} (${spot.name})`,
+          image: logoPreview || '/logo-small.png',
+          order_id: '',
+          handler: () => {
+            if (onBidPlaced) {
+              onBidPlaced(spot.id, {
+                brandName: brandName.trim(),
+                websiteUrl: websiteUrl.trim(),
+                email: email.trim(),
+                logoUrl: logoPreview || undefined,
+                bidAmount,
+                depositAmount: calculatedDeposit,
+                currency
+              });
+            }
+            setIsSubmitting(false);
+            setIsSuccess(true);
+          },
+          prefill: {
+            name: brandName.trim(),
+            email: email.trim()
+          },
+          theme: {
+            color: '#0071e3'
+          }
+        });
+        rzp.open();
+      } else {
+        // Test Mode Simulation: instant successful bid confirmation
+        setTimeout(() => {
+          if (onBidPlaced) {
+            onBidPlaced(spot.id, {
+              brandName: brandName.trim(),
+              websiteUrl: websiteUrl.trim(),
+              email: email.trim(),
+              logoUrl: logoPreview || undefined,
+              bidAmount,
+              depositAmount: calculatedDeposit,
+              currency
+            });
+          }
+          setIsSubmitting(false);
+          setIsSuccess(true);
+        }, 800);
       }
-
-      setIsSubmitted(true);
-      setIsSubmitting(false);
     } catch {
-      setErrorMessage('Network connection error. Please try again.');
+      setErrorMessage('Payment gateway connection error. Please try again.');
       setIsSubmitting(false);
     }
   };
 
-  // Contract reference for checkout integration verification
-  void initiateCheckoutSession;
-
   return (
-    <div className="bmm-modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="bid-modal-title">
-      <div className="bmm-modal-card" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="bmm-modal-overlay"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="bid-modal-title"
+    >
+      <div className="bmm-modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '540px' }}>
         <button
           type="button"
           onClick={onClose}
@@ -126,38 +226,41 @@ export const BidModal: React.FC<BidModalProps> = ({
 
         <div className="bmm-modal-header-badge">
           <span className="modal-pill-tag">
-            Spot #{spot.id} · {spot.surface.toUpperCase()}
+            Spot #{spot.id} · {spot.surface.toUpperCase()} · 14-DAY AUCTION
           </span>
         </div>
 
-        <h3 id="bid-modal-title" className="bmm-modal-title">{spot.name}</h3>
+        <h3 id="bid-modal-title" className="bmm-modal-title">
+          {spot.name}
+        </h3>
         <p className="bmm-modal-subtitle">
           {spot.size} · {spot.dimensions} ({spot.location})
         </p>
 
+        {/* Current Bid Stats Grid */}
         <div className="bmm-modal-stats-grid">
           <div>
-            <span className="bmm-modal-stat-label">Sponsorship Price</span>
-            <span className="bmm-modal-stat-val" style={{ color: 'var(--blue)' }}>
-              Pricing Coming Soon
+            <span className="bmm-modal-stat-label">Current Top Bid</span>
+            <span className="bmm-modal-stat-val tabular-nums" style={{ color: '#34c759' }}>
+              {formatCurrency(currentTopBid)}
             </span>
           </div>
           <div>
-            <span className="bmm-modal-stat-label">Status</span>
-            <span className="bmm-modal-stat-val" style={{ color: spot.isSold ? 'var(--ink)' : '#27ae60' }}>
-              {spot.isSold ? 'Sponsored (Permanent)' : 'Opening Soon'}
+            <span className="bmm-modal-stat-label">Total Bids Placed</span>
+            <span className="bmm-modal-stat-val tabular-nums">
+              {spot.bidCount} {spot.bidCount === 1 ? 'bid' : 'bids'}
             </span>
           </div>
           <div>
-            <span className="bmm-modal-stat-label">Duration</span>
+            <span className="bmm-modal-stat-label">Min. Increment</span>
+            <span className="bmm-modal-stat-val tabular-nums" style={{ color: 'var(--blue)' }}>
+              +{formatCurrency(minIncrement)}
+            </span>
+          </div>
+          <div>
+            <span className="bmm-modal-stat-label">Sticker Duration</span>
             <span className="bmm-modal-stat-val" style={{ color: '#0071e3', fontWeight: 700 }}>
               Device Lifelong ♾️
-            </span>
-          </div>
-          <div>
-            <span className="bmm-modal-stat-label">Vinyl Sticker</span>
-            <span className="bmm-modal-stat-val">
-              3M Matte UV-Proof
             </span>
           </div>
         </div>
@@ -181,15 +284,41 @@ export const BidModal: React.FC<BidModalProps> = ({
               This spot is permanently locked for the lifetime of this machine. To sponsor another position, please choose an open spot from the showcase.
             </p>
           </div>
-        ) : isSubmitted ? (
-          <div style={{ textAlign: 'center', padding: '32px 16px' }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎉</div>
+        ) : isSuccess ? (
+          <div style={{ textAlign: 'center', padding: '24px 16px' }}>
+            <div style={{ fontSize: '48px', marginBottom: '12px' }}>🎉</div>
             <h4 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--ink)', marginBottom: '8px' }}>
-              You're on the Priority Waitlist!
+              Your Bid is Officially Placed!
             </h4>
-            <p style={{ fontSize: '14px', color: 'var(--ink-2)', lineHeight: 1.6, maxWidth: '440px', margin: '0 auto 24px' }}>
-              Thank you for your interest in <strong>Spot #{spot.id} ({spot.name})</strong>. We've recorded your enquiry and will reach out to <strong>{email}</strong> the moment sponsorships officially launch.
+            <p style={{ fontSize: '14px', color: 'var(--ink-2)', lineHeight: 1.6, maxWidth: '440px', margin: '0 auto 16px' }}>
+              You are now the leading bidder for <strong>Spot #{spot.id}</strong> at{' '}
+              <strong style={{ color: '#34c759' }}>{formatCurrency(bidAmount)}</strong>.
             </p>
+
+            <div
+              style={{
+                background: '#f5f5f7',
+                borderRadius: '12px',
+                padding: '14px 18px',
+                textAlign: 'left',
+                margin: '0 auto 20px',
+                border: '1px solid #e5e5ea',
+                fontSize: '12px'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span style={{ color: 'var(--ink-2)' }}>20% Deposit Paid:</span>
+                <strong style={{ color: 'var(--ink)' }}>{formatCurrency(calculatedDeposit)}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span style={{ color: 'var(--ink-2)' }}>Remaining Balance if Won:</span>
+                <strong style={{ color: 'var(--ink)' }}>{formatCurrency(remainingBalance)}</strong>
+              </div>
+              <div style={{ borderTop: '1px solid #e5e5ea', paddingTop: '8px', color: '#0071e3', fontSize: '11px' }}>
+                🛡️ If outbid, your {formatCurrency(calculatedDeposit)} deposit is automatically refunded to your card.
+              </div>
+            </div>
+
             <button
               type="button"
               onClick={onClose}
@@ -200,117 +329,188 @@ export const BidModal: React.FC<BidModalProps> = ({
             </button>
           </div>
         ) : (
-          /* Public Preview Sponsorship Enquiry Form */
-          <form onSubmit={handleWaitlistSubmit} className="bmm-outbid-form">
-            <h4 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ink)', margin: '14px 0 8px' }}>
-              Express Interest in Spot #{spot.id}
-            </h4>
+          <form onSubmit={handleBidSubmit} className="bmm-outbid-form">
+            {/* Bid Amount Input & 20% Deposit Calculator */}
+            <div
+              style={{
+                background: 'linear-gradient(135deg, rgba(0, 113, 227, 0.05), rgba(52, 199, 89, 0.05))',
+                border: '1px solid rgba(0, 113, 227, 0.2)',
+                borderRadius: '12px',
+                padding: '14px 18px',
+                margin: '14px 0'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)', margin: 0 }}>
+                  Your Total Bid Amount: <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <span style={{ fontSize: '11px', color: 'var(--ink-2)' }}>
+                  Min: {formatCurrency(minRequiredBid)}
+                </span>
+              </div>
 
-            <div style={{ background: '#f5f5f7', padding: '12px 16px', borderRadius: '8px', marginBottom: '14px', border: '1px solid #e5e5ea', fontSize: '12px', color: '#1d1d1f' }}>
-              <strong style={{ display: 'block', marginBottom: '3px', color: 'var(--blue)' }}>
-                📢 Sponsorships Opening Soon
-              </strong>
-              <span>
-                Pricing and checkout will be announced once the campaign is ready to launch. Join the priority waitlist for Spot #{spot.id} with zero obligation.
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '20px', fontWeight: 700, color: 'var(--ink)' }}>
+                  {currency === 'INR' ? '₹' : currency === 'EUR' ? '€' : '$'}
+                </span>
+                <input
+                  type="number"
+                  min={minRequiredBid}
+                  step={currency === 'INR' ? 100 : 5}
+                  value={bidAmount}
+                  onChange={(e) => setBidAmount(Number(e.target.value) || 0)}
+                  className="bmm-input-field tabular-nums"
+                  style={{ fontSize: '18px', fontWeight: 700, padding: '8px 12px' }}
+                  required
+                  disabled={isSubmitting}
+                />
+              </div>
+
+              {/* 20% Deposit Breakdown */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginTop: '10px',
+                  paddingTop: '8px',
+                  borderTop: '1px solid rgba(0,0,0,0.06)',
+                  fontSize: '12px'
+                }}
+              >
+                <div>
+                  <span style={{ color: 'var(--ink-2)', display: 'block' }}>20% Deposit Due Now:</span>
+                  <strong style={{ color: 'var(--blue)', fontSize: '14px' }} className="tabular-nums">
+                    {formatCurrency(calculatedDeposit)}
+                  </strong>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ color: 'var(--ink-2)', display: 'block' }}>Balance if Won:</span>
+                  <strong style={{ color: 'var(--ink)', fontSize: '14px' }} className="tabular-nums">
+                    {formatCurrency(remainingBalance)}
+                  </strong>
+                </div>
+              </div>
             </div>
 
             {errorMessage && (
-              <div className="bmm-error-banner" style={{ background: '#fef2f2', border: '1px solid #f87171', color: '#991b1b', padding: '10px 14px', borderRadius: '8px', fontSize: '12px', marginBottom: '12px' }}>
+              <div
+                style={{
+                  background: '#fef2f2',
+                  border: '1px solid #f87171',
+                  color: '#991b1b',
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  marginBottom: '12px'
+                }}
+              >
                 ⚠️ {errorMessage}
               </div>
             )}
 
             <div className="form-group" style={{ marginBottom: '10px' }}>
-              <label className="bmm-form-label">Brand / Company Name: <span style={{ color: '#ef4444' }}>*</span></label>
+              <label className="bmm-form-label">
+                Brand / Sponsor Name: <span style={{ color: '#ef4444' }}>*</span>
+              </label>
               <input
                 type="text"
-                placeholder="e.g. Supabase, Cursor, Linear, or Your Startup"
+                placeholder="e.g. Supabase, Cursor, CleanMyMac"
                 value={brandName}
                 onChange={(e) => setBrandName(e.target.value)}
                 className="bmm-input-field"
                 required
                 disabled={isSubmitting}
-                maxLength={100}
+                maxLength={60}
               />
             </div>
 
             <div className="form-group" style={{ marginBottom: '10px' }}>
-              <label className="bmm-form-label">Contact Email (for notification when open): <span style={{ color: '#ef4444' }}>*</span></label>
+              <label className="bmm-form-label">
+                Target Website URL: <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <input
+                type="url"
+                placeholder="https://yourbrand.com"
+                value={websiteUrl}
+                onChange={(e) => setWebsiteUrl(e.target.value)}
+                className="bmm-input-field"
+                required
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '10px' }}>
+              <label className="bmm-form-label">
+                Contact Email: <span style={{ color: '#ef4444' }}>*</span>
+              </label>
               <input
                 type="email"
-                placeholder="founder@yourcompany.com"
+                placeholder="founder@yourbrand.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="bmm-input-field"
                 required
                 disabled={isSubmitting}
               />
-              <span style={{ fontSize: '11px', color: 'var(--ink-2)', display: 'block', marginTop: '3px' }}>
-                🔒 Your email is private and will never be shared publicly.
+              <span style={{ fontSize: '11px', color: 'var(--ink-2)', display: 'block', marginTop: '2px' }}>
+                Used for instant outbid alerts and winning settlement links. Never shared publicly.
               </span>
             </div>
 
-            <div className="form-group" style={{ marginBottom: '10px' }}>
-              <label className="bmm-form-label">Website or Social URL (Optional):</label>
-              <input
-                type="url"
-                placeholder="https://yourcompany.com"
-                value={websiteUrl}
-                onChange={(e) => setWebsiteUrl(e.target.value)}
-                className="bmm-input-field"
-                disabled={isSubmitting}
-              />
-            </div>
-
-            {/* Logo Upload Option with Validation */}
-            <div className="form-group" style={{ marginBottom: '14px' }}>
-              <label className="bmm-form-label">Upload Brand Logo Sticker (Optional):</label>
+            <div className="form-group" style={{ marginBottom: '16px' }}>
+              <label className="bmm-form-label">Brand Logo (PNG, SVG, JPG):</label>
               <input
                 type="file"
                 ref={fileInputRef}
+                accept="image/png,image/jpeg,image/webp,image/svg+xml"
                 onChange={handleLogoUpload}
-                accept="image/png, image/jpeg, image/webp, image/svg+xml"
-                style={{ display: 'none' }}
+                className="bmm-input-field"
+                style={{ fontSize: '12px', padding: '6px' }}
                 disabled={isSubmitting}
               />
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="bmm-btn-blue"
-                  style={{ fontSize: '12px', padding: '6px 14px' }}
-                  disabled={isSubmitting}
-                >
-                  {logoPreview ? 'Change Logo' : 'Upload Logo (PNG, SVG, WebP · Max 2MB)'}
-                </button>
-                {logoPreview && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <img
-                      src={logoPreview}
-                      alt="Logo Preview"
-                      style={{ height: '32px', maxWidth: '60px', objectFit: 'contain', background: '#f5f5f7', padding: '2px', borderRadius: '4px' }}
-                    />
-                    <span style={{ fontSize: '11px', color: '#16a34a' }}>✓ Attached</span>
-                  </div>
-                )}
-              </div>
               {logoError && (
-                <span style={{ fontSize: '11px', color: '#ef4444', display: 'block', marginTop: '4px' }}>
-                  ❌ {logoError}
+                <span style={{ color: '#ef4444', fontSize: '11px', display: 'block', marginTop: '2px' }}>
+                  {logoError}
                 </span>
               )}
+              {logoPreview && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                  <img
+                    src={logoPreview}
+                    alt="Logo preview"
+                    style={{ width: '40px', height: '24px', objectFit: 'contain', border: '1px solid #e5e5ea', borderRadius: '4px' }}
+                  />
+                  <span style={{ fontSize: '11px', color: '#34c759' }}>Logo ready for sticker print</span>
+                </div>
+              )}
+            </div>
+
+            {/* Outbid Refund Guarantee */}
+            <div
+              style={{
+                background: '#f5f5f7',
+                border: '1px solid #e5e5ea',
+                borderRadius: '8px',
+                padding: '10px 14px',
+                fontSize: '11px',
+                color: 'var(--ink-2)',
+                lineHeight: 1.4,
+                marginBottom: '14px'
+              }}
+            >
+              🛡️ <strong>BrandMyMac Guarantee:</strong> You only pay the 20% deposit ({formatCurrency(calculatedDeposit)}) now. If someone outbids you, your deposit is <strong>automatically refunded in full</strong>. If you win at auction end, your deposit counts toward the total and you pay the remaining balance.
             </div>
 
             <button
               type="submit"
-              className="bmm-btn-blue w-full"
-              style={{ padding: '12px 0', fontSize: '14px', opacity: isSubmitting ? 0.7 : 1 }}
               disabled={isSubmitting}
+              className="bmm-btn-blue"
+              style={{ width: '100%', padding: '12px', fontSize: '15px', fontWeight: 600 }}
             >
               {isSubmitting
-                ? 'Submitting Waitlist Enquiry...'
-                : `Join Priority Waitlist for Spot #${spot.id}`}
+                ? 'Processing Deposit...'
+                : `Place Bid with 20% Deposit (${formatCurrency(calculatedDeposit)}) 🚀`}
             </button>
           </form>
         )}

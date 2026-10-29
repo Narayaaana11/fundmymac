@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
-import type { BrandSpot, SponsorTier } from './data/fundMyMacData';
-import { FUNDING_GOAL, BRAND_SPOTS } from './data/fundMyMacData';
+import type { BrandSpot, SponsorTier, CornerState } from './data/fundMyMacData';
+import { FUNDING_GOAL, BRAND_SPOTS, CORNER_DATA } from './data/fundMyMacData';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { BrandMyMacNavbar, type DisplayCurrency } from './components/BrandMyMacNavbar';
 import { CornerWidget } from './components/CornerWidget';
+import { CornerTakeoverModal } from './components/CornerTakeoverModal';
+import { LeaderboardModal } from './components/LeaderboardModal';
+import { AuctionCountdown } from './components/AuctionCountdown';
 import { MacbookDisplay } from './components/MacbookDisplay';
 import { VesperMission } from './components/VesperMission';
 import { EventsRoadmap } from './components/EventsRoadmap';
@@ -24,8 +27,13 @@ export const App: React.FC = () => {
   const [currency, setCurrency] = useState<DisplayCurrency>('USD');
   const [selectedSpot, setSelectedSpot] = useState<BrandSpot | null>(null);
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
+  const [isCornerModalOpen, setIsCornerModalOpen] = useState(false);
+  const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
   const [selectedTier, setSelectedTier] = useState<SponsorTier | null>(null);
   const [isLiveSync, setIsLiveSync] = useState(false);
+
+  // Dynamic Corner Takeover state
+  const [cornerData, setCornerData] = useState<CornerState>(CORNER_DATA);
 
   // Return from checkout session (verified via server)
   const [checkoutReturn, setCheckoutReturn] = useState<{
@@ -86,7 +94,8 @@ export const App: React.FC = () => {
               logoUrl: dbSpot.logo_url || s.logoUrl,
               topBidUsd: dbSpot.price_usd_cents ? Math.round(dbSpot.price_usd_cents / 100) : (dbSpot.top_bid_usd || s.topBidUsd),
               topBidEur: dbSpot.price_eur_cents ? Math.round(dbSpot.price_eur_cents / 100) : (dbSpot.top_bid_eur || s.topBidEur),
-              topBidInr: dbSpot.price_inr_paise ? Math.round(dbSpot.price_inr_paise / 100) : (dbSpot.top_bid_inr || s.topBidInr)
+              topBidInr: dbSpot.price_inr_paise ? Math.round(dbSpot.price_inr_paise / 100) : (dbSpot.top_bid_inr || s.topBidInr),
+              bidCount: dbSpot.bid_count || s.bidCount
             };
           })
         );
@@ -134,6 +143,7 @@ export const App: React.FC = () => {
           price_usd_cents?: number;
           price_eur_cents?: number;
           price_inr_paise?: number;
+          bid_count?: number;
         };
         if (newRecord && typeof newRecord.id === 'number') {
           setSpots((prev) =>
@@ -147,7 +157,8 @@ export const App: React.FC = () => {
                     logoUrl: newRecord.logo_url || s.logoUrl,
                     topBidUsd: newRecord.price_usd_cents ? Math.round(newRecord.price_usd_cents / 100) : s.topBidUsd,
                     topBidEur: newRecord.price_eur_cents ? Math.round(newRecord.price_eur_cents / 100) : s.topBidEur,
-                    topBidInr: newRecord.price_inr_paise ? Math.round(newRecord.price_inr_paise / 100) : s.topBidInr
+                    topBidInr: newRecord.price_inr_paise ? Math.round(newRecord.price_inr_paise / 100) : s.topBidInr,
+                    bidCount: typeof newRecord.bid_count === 'number' ? newRecord.bid_count : s.bidCount + 1
                   }
                 : s
             )
@@ -184,16 +195,134 @@ export const App: React.FC = () => {
     };
   }, [refreshCanonicalData]);
 
-  const totalRaised = currency === 'INR'
-    ? `₹${raisedInr.toLocaleString('en-IN')}`
-    : currency === 'EUR'
-    ? `${raisedEur.toLocaleString()} €`
-    : `$${raisedUsd.toLocaleString()}`;
+  // Handle successful 20% deposit bid placement
+  const handleBidPlaced = (
+    spotId: number,
+    bidData: {
+      brandName: string;
+      websiteUrl: string;
+      email: string;
+      logoUrl?: string;
+      bidAmount: number;
+      depositAmount: number;
+      currency: DisplayCurrency;
+    }
+  ) => {
+    setSpots((prev) =>
+      prev.map((s) => {
+        if (s.id !== spotId) return s;
+        const newUsd =
+          bidData.currency === 'USD'
+            ? bidData.bidAmount
+            : bidData.currency === 'EUR'
+            ? Math.round(bidData.bidAmount * 1.08)
+            : Math.round(bidData.bidAmount / 84);
+        const newEur =
+          bidData.currency === 'EUR'
+            ? bidData.bidAmount
+            : bidData.currency === 'USD'
+            ? Math.round(bidData.bidAmount * 0.92)
+            : Math.round(bidData.bidAmount / 91);
+        const newInr =
+          bidData.currency === 'INR'
+            ? bidData.bidAmount
+            : Math.round(newUsd * 84);
 
-  const percentProgress = Math.round(
+        return {
+          ...s,
+          sponsorName: bidData.brandName,
+          sponsorUrl: bidData.websiteUrl,
+          logoUrl: bidData.logoUrl || s.logoUrl,
+          topBidUsd: newUsd,
+          topBidEur: newEur,
+          topBidInr: newInr,
+          bidCount: s.bidCount + 1
+        };
+      })
+    );
+
+    const depositUsd =
+      bidData.currency === 'USD'
+        ? bidData.depositAmount
+        : bidData.currency === 'EUR'
+        ? Math.round(bidData.depositAmount * 1.08)
+        : Math.round(bidData.depositAmount / 84);
+    const depositEur =
+      bidData.currency === 'EUR'
+        ? bidData.depositAmount
+        : bidData.currency === 'USD'
+        ? Math.round(bidData.depositAmount * 0.92)
+        : Math.round(bidData.depositAmount / 91);
+    const depositInr =
+      bidData.currency === 'INR'
+        ? bidData.depositAmount
+        : Math.round(depositUsd * 84);
+
+    setRaisedUsd((prev) => prev + depositUsd);
+    setRaisedEur((prev) => prev + depositEur);
+    setRaisedInr((prev) => prev + depositInr);
+  };
+
+  // Handle successful dynamic corner takeover
+  const handleCornerTakeoverSuccess = (newSponsor: {
+    brandName: string;
+    websiteUrl: string;
+    avatarUrl: string;
+    amountUsd: number;
+    amountInr: number;
+    amountEur: number;
+  }) => {
+    setCornerData((prev) => ({
+      currentSponsor: newSponsor.brandName,
+      currentUrl: newSponsor.websiteUrl,
+      avatarUrl: newSponsor.avatarUrl,
+      amountUsd: newSponsor.amountUsd,
+      amountEur: newSponsor.amountEur,
+      amountInr: newSponsor.amountInr,
+      nextBidUsd: newSponsor.amountUsd + 10,
+      nextBidEur: newSponsor.amountEur + 10,
+      nextBidInr: newSponsor.amountInr + 800,
+      heldDuration: 'Just now',
+      history: [
+        {
+          name: prev.currentSponsor,
+          url: prev.currentUrl,
+          avatarUrl: prev.avatarUrl,
+          amountUsd: prev.amountUsd,
+          amountEur: prev.amountEur,
+          amountInr: prev.amountInr,
+          held: `${prev.heldDuration} · $${prev.amountUsd}`
+        },
+        ...prev.history
+      ]
+    }));
+
+    setRaisedUsd((prev) => prev + newSponsor.amountUsd);
+    setRaisedEur((prev) => prev + newSponsor.amountEur);
+    setRaisedInr((prev) => prev + newSponsor.amountInr);
+  };
+
+  const totalRaised =
     currency === 'INR'
-      ? (raisedInr / FUNDING_GOAL.targetInr) * 100
-      : (raisedUsd / FUNDING_GOAL.targetUsd) * 100
+      ? `₹${raisedInr.toLocaleString('en-IN')}`
+      : currency === 'EUR'
+      ? `${raisedEur.toLocaleString()} €`
+      : `$${raisedUsd.toLocaleString()}`;
+
+  const goalTarget =
+    currency === 'INR'
+      ? `₹${FUNDING_GOAL.targetInr.toLocaleString('en-IN')}`
+      : currency === 'EUR'
+      ? `${FUNDING_GOAL.targetEur.toLocaleString()} €`
+      : `$${FUNDING_GOAL.targetUsd.toLocaleString()}`;
+
+  const percentProgress = Math.min(
+    Math.round(
+      currency === 'INR'
+        ? (raisedInr / FUNDING_GOAL.targetInr) * 100
+        : (raisedUsd / FUNDING_GOAL.targetUsd) * 100
+    ),
+    100
   );
 
   const handleSpotClick = (spot: BrandSpot) => {
@@ -211,56 +340,56 @@ export const App: React.FC = () => {
       <BrandMyMacNavbar
         currency={currency}
         onToggleCurrency={setCurrency}
-        onGetSpotClick={() => handleOpenDonate()}
+        onGetSpotClick={() => {
+          const marqueeSpot = spots.find((s) => s.id === 2) || spots[0];
+          setSelectedSpot(marqueeSpot);
+        }}
+        onOpenLeaderboard={() => setIsLeaderboardOpen(true)}
       />
 
       {/* Floating 'The Corner' Widget */}
       <CornerWidget
         currency={currency}
-        onClaimCorner={() => handleOpenDonate()}
+        cornerData={cornerData}
+        onClaimCorner={() => setIsCornerModalOpen(true)}
       />
 
       {/* Main Container */}
       <main>
         {/* Hero Section */}
         <header className="bmm-hero">
-          {/* Public Preview Notification Banner */}
-          <div className="bmm-pill-badge-green" style={{ marginBottom: '16px', background: 'rgba(0, 113, 227, 0.1)', color: '#0071e3', border: '1px solid rgba(0, 113, 227, 0.25)' }}>
-            <span>🌟 PUBLIC PREVIEW · SPONSORSHIPS OPENING SOON</span>
+          {/* Live Auction Notification Banner */}
+          <div
+            className="bmm-pill-badge-green"
+            style={{
+              marginBottom: '16px',
+              background: 'rgba(52, 199, 89, 0.12)',
+              color: '#27ae60',
+              border: '1px solid rgba(52, 199, 89, 0.3)'
+            }}
+          >
+            <span>🔥 14-DAY LIVE AUCTION · 20% DEPOSIT TO BID · 100% OUTBID REFUND</span>
           </div>
 
           {/* Real-time WebSocket Metrics Row */}
           <RealtimeMetricsRow spots={spots} />
 
           <h1 className="bmm-h1">
-            Fund My Mac
+            Your brand, on my Mac.
           </h1>
           <p className="bmm-hero-sub" style={{ fontSize: '20px', fontWeight: 600, color: 'var(--ink)' }}>
-            Be part of the beginning.
+            Turn laptop aluminum into high-impact IRL and digital advertising.
           </p>
           <p className="bmm-hero-sub" style={{ maxWidth: '640px', margin: '0 auto 20px', fontSize: '16px', lineHeight: 1.6 }}>
-            We're preparing a new sponsorship campaign. Explore the available spaces, express your interest, and be among the first to hear when sponsorships officially open.
+            Financing our Apple M5 Max / M5 Pro machine and VESPER AI startup by selling its surfaces. Bid for a spot and your logo travels to demo days, VC pitch rooms, hackathons, and every build-in-public vlog.
           </p>
 
-          {/* Supporting Public Preview Notice Card */}
-          <div style={{
-            background: 'linear-gradient(135deg, rgba(0, 113, 227, 0.06), rgba(52, 199, 89, 0.06))',
-            border: '1px solid rgba(0, 113, 227, 0.2)',
-            borderRadius: '12px',
-            padding: '14px 20px',
-            maxWidth: '620px',
-            margin: '0 auto 28px',
-            textAlign: 'center'
-          }}>
-            <strong style={{ display: 'block', fontSize: '15px', color: 'var(--ink)', marginBottom: '4px' }}>
-              📢 Sponsorships opening soon
-            </strong>
-            <span style={{ fontSize: '13px', color: 'var(--ink-2)' }}>
-              Pricing and checkout will be announced once the campaign is ready to launch.
-            </span>
+          {/* 14-Day Live Countdown Component */}
+          <div style={{ maxWidth: '480px', margin: '0 auto 24px' }}>
+            <AuctionCountdown />
           </div>
 
-          {/* Funding Progress Bar */}
+          {/* Real-Time Hardware Funding Tracker */}
           <div className="bmm-progress-wrap">
             <div className="bmm-progress-meta">
               <span className="bmm-progress-raised tabular-nums">
@@ -268,7 +397,7 @@ export const App: React.FC = () => {
                 <span>raised</span>
               </span>
               <span className="bmm-progress-goal">
-                hardware goal · <strong className="tabular-nums">Pricing Coming Soon</strong>
+                Milestone 1 Hardware Goal: <strong className="tabular-nums">{goalTarget}</strong> ({percentProgress}%)
               </span>
             </div>
 
@@ -282,7 +411,7 @@ export const App: React.FC = () => {
             >
               <div
                 className="bmm-progress-fill"
-                style={{ width: `${Math.min(percentProgress, 100)}%` }}
+                style={{ width: `${Math.max(percentProgress, 4)}%` }}
               />
             </div>
           </div>
@@ -310,25 +439,31 @@ export const App: React.FC = () => {
           <div className="bmm-hero-bottom-actions">
             <button
               type="button"
-              onClick={() => handleOpenDonate()}
+              onClick={() => {
+                const marqueeSpot = spots.find((s) => s.id === 2) || spots[0];
+                setSelectedSpot(marqueeSpot);
+              }}
               className="bmm-btn-blue"
-              style={{ padding: '12px 24px', fontSize: '15px' }}
+              style={{ padding: '12px 28px', fontSize: '15px' }}
             >
-              💖 Join the Waitlist
+              🏷️ Bid on a Spot (From {currency === 'INR' ? '₹11,300' : '$135'})
             </button>
-            <a
-              href="#macbook-showcase"
+            <button
+              type="button"
+              onClick={() => setIsLeaderboardOpen(true)}
               className="bmm-btn-outline"
-              style={{ textDecoration: 'none', padding: '12px 20px', fontSize: '14px', borderRadius: '980px', display: 'inline-flex', alignItems: 'center' }}
+              style={{ padding: '12px 22px', fontSize: '14px', borderRadius: '980px', display: 'inline-flex', alignItems: 'center' }}
             >
-              Explore Sponsorship Spaces
-            </a>
-            <a href="#vesper-mission" className="bmm-link-how">
-              Read the VESPER story ›
-            </a>
-            <a href="#events" className="bmm-link-how" style={{ marginLeft: '12px' }}>
-              View upcoming events ›
-            </a>
+              🏆 View Leaderboard
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsCornerModalOpen(true)}
+              className="bmm-btn-outline"
+              style={{ padding: '12px 22px', fontSize: '14px', borderRadius: '980px', display: 'inline-flex', alignItems: 'center' }}
+            >
+              ⚡ Take The Corner
+            </button>
           </div>
         </header>
 
@@ -378,6 +513,7 @@ export const App: React.FC = () => {
           currency={currency}
           spots={spots}
           onSpotClick={handleSpotClick}
+          onOpenLeaderboard={() => setIsLeaderboardOpen(true)}
           isLiveSync={isLiveSync}
         />
 
@@ -394,14 +530,33 @@ export const App: React.FC = () => {
       {/* Footer */}
       <BrandMyMacFooter />
 
-      {/* Spot Inspection & Claim Modal */}
+      {/* Spot Inspection & Live 20% Deposit Bidding Modal */}
       {selectedSpot && (
         <BidModal
           spot={selectedSpot}
           currency={currency}
           onClose={() => setSelectedSpot(null)}
+          onBidPlaced={handleBidPlaced}
         />
       )}
+
+      {/* Dynamic Corner Takeover Checkout Modal */}
+      <CornerTakeoverModal
+        isOpen={isCornerModalOpen}
+        currency={currency}
+        cornerData={cornerData}
+        onClose={() => setIsCornerModalOpen(false)}
+        onTakeoverSuccess={handleCornerTakeoverSuccess}
+      />
+
+      {/* Official Live Leaderboard Modal */}
+      <LeaderboardModal
+        isOpen={isLeaderboardOpen}
+        currency={currency}
+        spots={spots}
+        onClose={() => setIsLeaderboardOpen(false)}
+        onSelectSpot={handleSpotClick}
+      />
 
       {/* Donation & Sponsor Tier Checkout Modal */}
       <DonationModal
