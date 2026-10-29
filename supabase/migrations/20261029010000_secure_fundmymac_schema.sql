@@ -144,8 +144,15 @@ ALTER TABLE public.payment_transactions ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow public update on brand_spots" ON public.brand_spots;
 DROP POLICY IF EXISTS "Allow public read on brand_spots" ON public.brand_spots;
 DROP POLICY IF EXISTS "Allow public read on site_stats" ON public.site_stats;
-DROP POLICY IF EXISTS "Allow public read on donations" ON public.donations;
-DROP POLICY IF EXISTS "Allow public insert on donations" ON public.donations;
+
+-- Safely drop legacy policies only if legacy donations table exists
+DO $$
+BEGIN
+    IF to_regclass('public.donations') IS NOT NULL THEN
+        EXECUTE 'DROP POLICY IF EXISTS "Allow public read on donations" ON public.donations';
+        EXECUTE 'DROP POLICY IF EXISTS "Allow public insert on donations" ON public.donations';
+    END IF;
+END $$;
 
 -- 8. Apply Strict, Least-Privilege RLS Policies
 -- site_stats: Public SELECT only

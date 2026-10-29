@@ -100,7 +100,7 @@ CREATE TABLE IF NOT EXISTS public.sponsorship_orders (
     sponsor_email TEXT NOT NULL,
     logo_url TEXT,
     payment_provider TEXT NOT NULL DEFAULT 'razorpay',
-    provider_order_id TEXT UNIQUE,
+    provider_order_id TEXT,
     provider_session_id TEXT UNIQUE,
     provider_payment_id TEXT,
     provider_payment_intent_id TEXT,
@@ -109,6 +109,10 @@ CREATE TABLE IF NOT EXISTS public.sponsorship_orders (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     paid_at TIMESTAMPTZ
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sponsorship_orders_provider_order_id 
+ON public.sponsorship_orders(provider_order_id) 
+WHERE provider_order_id IS NOT NULL;
 
 -- 4. Create Payment Transactions Audit Log (Contains Immutable Ledger & Idempotency)
 CREATE TABLE IF NOT EXISTS public.payment_transactions (
@@ -151,8 +155,15 @@ ALTER TABLE public.payment_transactions ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow public update on brand_spots" ON public.brand_spots;
 DROP POLICY IF EXISTS "Allow public read on brand_spots" ON public.brand_spots;
 DROP POLICY IF EXISTS "Allow public read on site_stats" ON public.site_stats;
-DROP POLICY IF EXISTS "Allow public read on donations" ON public.donations;
-DROP POLICY IF EXISTS "Allow public insert on donations" ON public.donations;
+
+-- Safely drop legacy policies only if legacy donations table exists
+DO $$
+BEGIN
+    IF to_regclass('public.donations') IS NOT NULL THEN
+        EXECUTE 'DROP POLICY IF EXISTS "Allow public read on donations" ON public.donations';
+        EXECUTE 'DROP POLICY IF EXISTS "Allow public insert on donations" ON public.donations';
+    END IF;
+END $$;
 
 -- 8. Apply Strict, Least-Privilege RLS Policies
 -- site_stats: Public SELECT only
@@ -191,6 +202,9 @@ DECLARE
     v_now TIMESTAMPTZ := NOW();
     v_expiry TIMESTAMPTZ;
 BEGIN
+    -- Sweep any expired reservations across all spots first
+    PERFORM public.release_expired_reservations();
+
     -- Acquire exclusive row lock
     SELECT * INTO v_spot
     FROM public.brand_spots

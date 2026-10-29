@@ -88,9 +88,9 @@ npx supabase db push
 ```
 
 The migrations will execute in canonical order:
-1. `supabase/migrations/20261029_secure_fundmymac_schema.sql` (Baseline RLS tables & RPCs)
-2. `supabase/migrations/20261029_razorpay_integration.sql` (Multi-currency & Razorpay fields)
-3. `supabase/migrations/20261029_production_readiness_hardening.sql` (Refunds, reconciliation, security definers)
+1. `supabase/migrations/20261029010000_secure_fundmymac_schema.sql` (Baseline RLS tables & RPCs)
+2. `supabase/migrations/20261029020000_razorpay_integration.sql` (Multi-currency & Razorpay fields)
+3. `supabase/migrations/20261029030000_production_readiness_hardening.sql` (Refunds, reconciliation, security definers)
 
 ### Step 1.3: Post-Migration Verification Queries
 Run these validation queries to confirm database integrity:

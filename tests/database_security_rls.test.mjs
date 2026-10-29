@@ -4,12 +4,18 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 describe('Database Security & Row-Level Security (RLS) Policies', () => {
-  const secureSchemaMigrationPath = resolve('supabase/migrations/20261029_secure_fundmymac_schema.sql');
-  const razorpayMigrationPath = resolve('supabase/migrations/20261029_razorpay_integration.sql');
+  const findMigration = (pattern) => {
+    const files = existsSync('supabase/migrations') ? readdirSync('supabase/migrations') : [];
+    const match = files.find(f => f.includes(pattern));
+    return match ? resolve('supabase/migrations', match) : resolve('supabase/migrations', pattern);
+  };
+
+  const secureSchemaMigrationPath = findMigration('secure_fundmymac_schema.sql');
+  const razorpayMigrationPath = findMigration('razorpay_integration.sql');
   const setupSqlPath = resolve('supabase-setup.sql');
 
   test('Migration and setup SQL files exist', () => {
@@ -67,7 +73,7 @@ describe('Database Security & Row-Level Security (RLS) Policies', () => {
     assert.match(rzpSqlContent, /GRANT EXECUTE ON FUNCTION public\.confirm_paid_order\(TEXT, TEXT, TEXT, INT, TEXT, JSONB\) TO service_role;/, 'confirm_paid_order granted to service_role');
   });
 
-  const hardeningMigrationPath = resolve('supabase/migrations/20261029_production_readiness_hardening.sql');
+  const hardeningMigrationPath = findMigration('production_readiness_hardening.sql');
   test('Production hardening migration implements refund workflow and sweep', () => {
     assert.ok(existsSync(hardeningMigrationPath), 'Production hardening migration exists');
     const hardeningContent = readFileSync(hardeningMigrationPath, 'utf8');
@@ -77,5 +83,29 @@ describe('Database Security & Row-Level Security (RLS) Policies', () => {
     assert.match(hardeningContent, /CREATE OR REPLACE FUNCTION public\.reconcile_unclaimed_payment/, 'reconcile_unclaimed_payment procedure implemented');
     assert.match(hardeningContent, /REVOKE EXECUTE ON FUNCTION public\.process_order_refund\(UUID, TEXT, TEXT\) FROM PUBLIC, anon;/, 'Refund procedure execution revoked from public/anon');
     assert.match(hardeningContent, /GRANT EXECUTE ON FUNCTION public\.process_order_refund\(UUID, TEXT, TEXT\) TO service_role;/, 'Refund procedure granted exclusively to service_role');
+  });
+
+  test('Migration filenames use 14-digit timestamps and sort in dependency order', () => {
+    const files = readdirSync('supabase/migrations').filter(f => f.endsWith('.sql')).sort();
+    assert.equal(files.length, 3, 'Three versioned migration files exist');
+    assert.match(files[0], /^\d{14}_secure_fundmymac_schema\.sql$/, 'First migration is baseline schema with 14-digit timestamp');
+    assert.match(files[1], /^\d{14}_razorpay_integration\.sql$/, 'Second migration is razorpay integration with 14-digit timestamp');
+    assert.match(files[2], /^\d{14}_production_readiness_hardening\.sql$/, 'Third migration is production hardening with 14-digit timestamp');
+  });
+
+  test('Clean-database safety: legacy donations policy drop is safely guarded with existence check', () => {
+    assert.match(sqlContent, /to_regclass\('public\.donations'\)/, 'Migration 1 guards donations drop with to_regclass');
+    assert.match(setupContent, /to_regclass\('public\.donations'\)/, 'Setup script guards donations drop with to_regclass');
+  });
+
+  test('Consolidated setup script and hardening migration agree on atomic_reserve_spot expired sweep', () => {
+    const hardeningContent = readFileSync(hardeningMigrationPath, 'utf8');
+    assert.match(hardeningContent, /PERFORM public\.release_expired_reservations\(\);/, 'Hardening migration sweeps expired reservations');
+    assert.match(setupContent, /PERFORM public\.release_expired_reservations\(\);/, 'Setup script sweeps expired reservations in atomic_reserve_spot');
+  });
+
+  test('Consolidated setup script and Razorpay migration agree on provider_order_id index', () => {
+    assert.match(rzpSqlContent, /CREATE UNIQUE INDEX IF NOT EXISTS idx_sponsorship_orders_provider_order_id/, 'Migration defines idx_sponsorship_orders_provider_order_id');
+    assert.match(setupContent, /CREATE UNIQUE INDEX IF NOT EXISTS idx_sponsorship_orders_provider_order_id/, 'Setup script defines idx_sponsorship_orders_provider_order_id');
   });
 });
