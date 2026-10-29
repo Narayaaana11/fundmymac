@@ -33,12 +33,27 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // Request size limit: 2.5MB maximum
+    const contentLength = req.headers.get('content-length');
+    if (contentLength && parseInt(contentLength, 10) > 2.5 * 1024 * 1024) {
+      return new Response(JSON.stringify({ error: 'Payload exceeds 2.5MB limit' }), {
+        status: 413,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     const webhookSecret = Deno.env.get('RAZORPAY_WEBHOOK_SECRET');
     const signature = req.headers.get('x-razorpay-signature');
 
     const rawBody = await req.text();
 
-    if (webhookSecret && signature) {
+    if (webhookSecret) {
+      if (!signature) {
+        return new Response(JSON.stringify({ error: 'Missing x-razorpay-signature header' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
       const isValid = await verifyHmacSha256(webhookSecret, rawBody, signature);
       if (!isValid) {
         return new Response(JSON.stringify({ error: 'Invalid webhook signature' }), {

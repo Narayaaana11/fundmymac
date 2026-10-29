@@ -89,6 +89,15 @@ serve(async (req) => {
       });
     }
 
+    // Request size limit: 2.5MB maximum
+    const contentLength = req.headers.get('content-length');
+    if (contentLength && parseInt(contentLength, 10) > 2.5 * 1024 * 1024) {
+      return new Response(JSON.stringify({ success: false, error: 'Payload exceeds 2.5MB limit' }), {
+        status: 413,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     // 2. POST: Verify Razorpay Checkout Signature
     const razorpayKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
     const { razorpayPaymentId, razorpayOrderId, razorpaySignature } = await req.json();

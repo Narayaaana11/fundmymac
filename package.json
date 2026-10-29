@@ -12,6 +12,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "test": "node tests/run_all_tests.mjs",
+    "preflight:staging": "node scripts/preflight-staging.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
