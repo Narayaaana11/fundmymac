@@ -87,10 +87,18 @@ describe('Database Security & Row-Level Security (RLS) Policies', () => {
 
   test('Migration filenames use 14-digit timestamps and sort in dependency order', () => {
     const files = readdirSync('supabase/migrations').filter(f => f.endsWith('.sql')).sort();
-    assert.equal(files.length, 3, 'Three versioned migration files exist');
+    assert.equal(files.length, 4, 'Four versioned migration files exist');
     assert.match(files[0], /^\d{14}_secure_fundmymac_schema\.sql$/, 'First migration is baseline schema with 14-digit timestamp');
     assert.match(files[1], /^\d{14}_razorpay_integration\.sql$/, 'Second migration is razorpay integration with 14-digit timestamp');
     assert.match(files[2], /^\d{14}_production_readiness_hardening\.sql$/, 'Third migration is production hardening with 14-digit timestamp');
+    assert.match(files[3], /^\d{14}_sponsorship_enquiries\.sql$/, 'Fourth migration is sponsorship enquiries with 14-digit timestamp');
+  });
+
+  test('Sponsorship enquiries table is protected by strict RLS and zero public SELECT', () => {
+    const enquiryMigration = readFileSync('supabase/migrations/20261029040000_sponsorship_enquiries.sql', 'utf8');
+    assert.match(enquiryMigration, /ALTER TABLE public\.sponsorship_enquiries ENABLE ROW LEVEL SECURITY;/, 'Enquiries table has RLS enabled');
+    assert.match(enquiryMigration, /REVOKE SELECT, UPDATE, DELETE ON public\.sponsorship_enquiries FROM anon(?:,\s*authenticated)?;/, 'Anon and authenticated explicitly denied SELECT/PII access');
+    assert.match(enquiryMigration, /CREATE POLICY "anon_can_insert_enquiry"/, 'Anon has INSERT policy with email validation');
   });
 
   test('Clean-database safety: legacy donations policy drop is safely guarded with existence check', () => {

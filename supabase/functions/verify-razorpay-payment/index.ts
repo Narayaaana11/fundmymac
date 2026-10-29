@@ -109,19 +109,32 @@ serve(async (req) => {
       });
     }
 
-    // 1. Signature Verification
-    if (razorpayKeySecret) {
-      const isValid = await verifyHmacSha256(
-        razorpayKeySecret,
-        `${razorpayOrderId}|${razorpayPaymentId}`,
-        razorpaySignature
-      );
-      if (!isValid) {
-        return new Response(JSON.stringify({ success: false, verified: false, error: 'Invalid HMAC signature' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
+    // 1. Signature Verification (Strict Fail-Closed)
+    if (!razorpayKeySecret) {
+      return new Response(JSON.stringify({
+        success: false,
+        verified: false,
+        error: 'Payment verification secret unconfigured on server; failing closed.'
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const isValid = await verifyHmacSha256(
+      razorpayKeySecret,
+      `${razorpayOrderId}|${razorpayPaymentId}`,
+      razorpaySignature
+    );
+    if (!isValid) {
+      return new Response(JSON.stringify({
+        success: false,
+        verified: false,
+        error: 'Invalid Razorpay HMAC-SHA256 signature'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     // 2. Lookup order

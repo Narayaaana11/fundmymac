@@ -73,6 +73,19 @@ serve(async (req) => {
     const razorpayKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
     const isProduction = Deno.env.get('ENVIRONMENT') === 'production' || Deno.env.get('NODE_ENV') === 'production';
 
+    // 0. Server-Enforced Fail-Closed Launch Gate for Public Preview
+    const isCheckoutEnabled = Deno.env.get('CHECKOUT_ENABLED') === 'true';
+    if (!isCheckoutEnabled) {
+      return new Response(JSON.stringify({
+        success: false,
+        previewMode: true,
+        error: 'Sponsorship checkout is currently opening soon. Public preview is active; orders cannot be created at this time. Please join the waitlist.'
+      }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     if (isProduction && (!razorpayKeyId || !razorpayKeySecret)) {
       return new Response(JSON.stringify({
         success: false,
@@ -180,35 +193,19 @@ serve(async (req) => {
       }
     }
 
-    // 4. Create Razorpay Order
+    // 4. Create Razorpay Order (Strict Fail-Closed)
     if (!razorpayKeyId || !razorpayKeySecret) {
-      // Sandbox fallback
-      const testOrderId = `order_test_${Date.now()}`;
-      await supabaseClient.from('sponsorship_orders').insert({
-        provider_session_id: testOrderId,
-        provider_order_id: testOrderId,
-        order_type: orderType,
-        spot_id: spotId || null,
-        tier_id: tierId || null,
-        amount_cents: canonicalAmountMinor,
-        currency: cur,
-        status: 'reserved',
-        sponsor_name: sponsorName.trim(),
-        sponsor_url: sponsorUrl || null,
-        sponsor_email: sponsorEmail.trim(),
-        logo_url: logoUrl || null,
-        payment_provider: 'test'
-      });
-
+      if (orderType === 'spot_sponsorship' && spotId) {
+        await supabaseClient.from('brand_spots')
+          .update({ status: 'available', reserved_until: null, reserved_by_session_id: null })
+          .eq('id', spotId)
+          .eq('reserved_by_session_id', internalOrderId);
+      }
       return new Response(JSON.stringify({
-        success: true,
-        orderId: internalOrderId,
-        razorpayOrderId: testOrderId,
-        amountMinor: canonicalAmountMinor,
-        currency: cur,
-        isTestMode: true,
-        keyId: 'rzp_test_placeholder'
+        success: false,
+        error: 'Payment gateway configuration missing: Valid Razorpay merchant credentials required.'
       }), {
+        status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }

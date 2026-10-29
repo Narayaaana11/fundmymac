@@ -71,7 +71,7 @@ export class RazorpayPaymentAdapter {
       razorpayWebhookSecret: config?.razorpayWebhookSecret || process.env.RAZORPAY_WEBHOOK_SECRET,
       supabaseUrl: config?.supabaseUrl || process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
       supabaseServiceKey: config?.supabaseServiceKey || process.env.SUPABASE_SERVICE_ROLE_KEY,
-      isTestMode: config?.isTestMode ?? (!process.env.RAZORPAY_KEY_SECRET || process.env.NODE_ENV === 'test')
+      isTestMode: config?.isTestMode ?? (process.env.NODE_ENV === 'test')
     };
 
     if (this.config.supabaseUrl && this.config.supabaseServiceKey) {
@@ -318,9 +318,12 @@ export class RazorpayPaymentAdapter {
         } catch {
           signatureValid = false;
         }
-      } else if (this.config.isTestMode) {
-        // In mock test mode without a real secret, accept test format signatures
+      } else if (this.config.isTestMode && !this.supabase && process.env.NODE_ENV !== 'production') {
+        // Pure in-memory unit test fixture only (no database connection permitted)
         signatureValid = razorpaySignature.startsWith('sig_') || razorpaySignature === 'valid_test_signature';
+      } else {
+        // Fail-closed: Never verify a signature without a configured cryptographic secret
+        signatureValid = false;
       }
 
       if (!signatureValid) {
@@ -403,9 +406,12 @@ export class RazorpayPaymentAdapter {
         } catch {
           isValidSignature = false;
         }
-      } else if (this.config.isTestMode) {
-        // In test mode without live secret, allow mock signature prefixes
+      } else if (this.config.isTestMode && !this.supabase && process.env.NODE_ENV !== 'production') {
+        // Pure in-memory unit test fixture only (no database connection permitted)
         isValidSignature = signatureHeader.startsWith('t=') || signatureHeader.startsWith('sig_test_');
+      } else {
+        // Fail-closed: Webhook secret strictly required
+        isValidSignature = false;
       }
 
       if (!isValidSignature) {

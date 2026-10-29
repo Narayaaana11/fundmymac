@@ -91,7 +91,7 @@ export const BrandMyMacNavbar: React.FC<BrandMyMacNavbarProps> = ({
               onClick={onGetSpotClick}
               className="bmm-btn-get-spot"
             >
-              Fund This Mac
+              Join the Waitlist
             </button>
 
             {/* Mobile Hamburger Toggle Button */}
@@ -139,7 +139,7 @@ export const BrandMyMacNavbar: React.FC<BrandMyMacNavbarProps> = ({
             className="bmm-btn-blue"
             style={{ width: '100%', padding: '10px 0', marginTop: '6px' }}
           >
-            💖 Fund This Mac / Claim Spot
+            💖 Join the Waitlist
           </button>
         </div>
       )}

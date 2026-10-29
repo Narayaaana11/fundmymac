@@ -8,17 +8,14 @@ interface CornerWidgetProps {
 }
 
 export const CornerWidget: React.FC<CornerWidgetProps> = ({
-  currency,
   onClaimCorner
 }) => {
-  const claimPrice = currency === 'INR' ? '₹6,300' : currency === 'EUR' ? '69 €' : '$75';
-
   return (
     <>
       {/* Floating Desktop Widget */}
       <aside className="bmm-corner-desktop" id="corner">
         <div className="bmm-corner-card" onClick={onClaimCorner}>
-          <span className="bmm-corner-paid-tag">Open Spot</span>
+          <span className="bmm-corner-paid-tag">Opening Soon</span>
           <img
             src="/logo-small.png"
             alt="The Corner"
@@ -29,7 +26,7 @@ export const CornerWidget: React.FC<CornerWidgetProps> = ({
           />
           <span className="bmm-corner-name">Your Brand Here</span>
           <span className="bmm-corner-claim-hint">
-            Claim this spot for <strong>{claimPrice}</strong>
+            <strong>Pricing Coming Soon</strong>
           </span>
         </div>
 
@@ -45,7 +42,7 @@ export const CornerWidget: React.FC<CornerWidgetProps> = ({
             className="bmm-btn-blue"
             style={{ width: '100%', fontSize: '12px', minHeight: '36px', padding: '8px 12px' }}
           >
-            Claim The Corner ({claimPrice})
+            Coming Soon · Join Waitlist
           </button>
         </div>
       </aside>
@@ -60,10 +57,10 @@ export const CornerWidget: React.FC<CornerWidgetProps> = ({
           />
           <div>
             <span style={{ fontSize: '13px', fontWeight: 600, display: 'block' }}>
-              The Corner Spot
+              The Corner Space
             </span>
             <span style={{ fontSize: '11px', color: 'var(--ink-2)' }}>
-              Open to Sponsor
+              Pricing Coming Soon
             </span>
           </div>
         </div>
@@ -74,7 +71,7 @@ export const CornerWidget: React.FC<CornerWidgetProps> = ({
           className="bmm-btn-get-spot"
           style={{ fontSize: '12px', padding: '6px 14px' }}
         >
-          Claim for {claimPrice}
+          Coming Soon
         </button>
       </div>
     </>

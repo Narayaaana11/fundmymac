@@ -9,7 +9,8 @@ const testFiles = [
   'tests/payment_checkout.test.mjs',
   'tests/concurrency_reservation.test.mjs',
   'tests/webhook_idempotency.test.mjs',
-  'tests/frontend_canonical.test.mjs'
+  'tests/frontend_canonical.test.mjs',
+  'tests/public_preview_security.test.mjs'
 ];
 
 console.log('====================================================');

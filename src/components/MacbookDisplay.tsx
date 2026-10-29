@@ -34,7 +34,7 @@ const getInsideSpotPosition = (id: number) => {
 };
 
 export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
-  currency,
+  currency: _currency,
   onSpotClick,
   spots
 }) => {
@@ -71,12 +71,8 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
     return previewTargetSpotId === spotId;
   };
 
-  const formatPrice = (eur: number, usd: number, inr?: number) => {
-    if (currency === 'INR') {
-      const val = inr || Math.round(usd * 84);
-      return `₹${val.toLocaleString('en-IN')}`;
-    }
-    return currency === 'EUR' ? `${eur.toLocaleString()} €` : `$${usd.toLocaleString()}`;
+  const formatPrice = (_eur: number, _usd: number, _inr?: number) => {
+    return 'Pricing Coming Soon';
   };
 
   // Cursor-based 3D tilt handler
@@ -325,7 +321,7 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
                           />
                         ) : (
                           <span className="bmm-spot-sponsor-title">
-                            {viewMode === 'final' ? '' : (spot.isSold ? spot.sponsorName : (spot.id === 2 ? 'Prime Marquee' : 'Open Spot'))}
+                            {viewMode === 'final' ? '' : (spot.isSold ? spot.sponsorName : (spot.id === 2 ? 'Prime Marquee' : 'Opening Soon'))}
                           </span>
                         )}
                       </div>
@@ -530,7 +526,7 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
             )}
           </div>
           <span className="bmm-mobile-acc-status">
-            {shouldShowPreviewLogo(chargerSpot.id) ? '✨ Previewing Your Logo' : chargerSpot.isSold ? `Sponsored by ${chargerSpot.sponsorName}` : `Claim for ${formatPrice(chargerSpot.topBidEur, chargerSpot.topBidUsd, chargerSpot.topBidInr)}`}
+            {shouldShowPreviewLogo(chargerSpot.id) ? '✨ Previewing Your Logo' : chargerSpot.isSold ? `Sponsored by ${chargerSpot.sponsorName}` : 'Pricing Coming Soon'}
           </span>
         </div>
 
@@ -560,7 +556,7 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
             )}
           </div>
           <span className="bmm-mobile-acc-status">
-            {shouldShowPreviewLogo(mouseSpot.id) ? '✨ Previewing Your Logo' : mouseSpot.isSold ? `Sponsored by ${mouseSpot.sponsorName}` : `Claim for ${formatPrice(mouseSpot.topBidEur, mouseSpot.topBidUsd, mouseSpot.topBidInr)}`}
+            {shouldShowPreviewLogo(mouseSpot.id) ? '✨ Previewing Your Logo' : mouseSpot.isSold ? `Sponsored by ${mouseSpot.sponsorName}` : 'Pricing Coming Soon'}
           </span>
         </div>
       </div>
@@ -574,7 +570,7 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
             onClick={() => setViewMode('auction')}
             className={`bmm-pill-btn ${viewMode === 'auction' ? 'active' : ''}`}
           >
-            The auction
+            Sponsorship Spaces
           </button>
           <button
             type="button"
@@ -585,7 +581,7 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
             Final look
           </button>
         </div>
-        <p className="bmm-tap-hint">Tap any spot to place a bid or inspect perks.</p>
+        <p className="bmm-tap-hint">Tap any space to inspect perks and join the waitlist.</p>
       </div>
     </div>
   );

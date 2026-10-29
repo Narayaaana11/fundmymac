@@ -32,6 +32,7 @@ export interface CheckoutSessionResult {
   keyId?: string;
   checkoutUrl?: string;
   isTestMode?: boolean;
+  previewMode?: boolean;
   error?: string;
 }
 

@@ -24,7 +24,7 @@ interface SponsorsWallProps {
 }
 
 export const SponsorsWall: React.FC<SponsorsWallProps> = ({
-  currency,
+  currency: _currency,
   onSelectTier,
   onOpenCustomDonation
 }) => {
@@ -50,11 +50,8 @@ export const SponsorsWall: React.FC<SponsorsWallProps> = ({
     { id: 4, title: 'The Corner Sponsor', priceUsd: 75, priceEur: 69, priceInr: 6300, spot: 'Sticky Top Left Widget Banner' }
   ];
 
-  const formatPrice = (tier: SponsorTier) => {
-    if (currency === 'INR') {
-      return `₹${(tier.priceInr || Math.round(tier.priceUsd * 84)).toLocaleString('en-IN')}`;
-    }
-    return currency === 'EUR' ? `${tier.priceEur} €` : `$${tier.priceUsd}`;
+  const formatPrice = (_tier: SponsorTier) => {
+    return 'Pricing Coming Soon';
   };
 
   return (
@@ -129,7 +126,7 @@ export const SponsorsWall: React.FC<SponsorsWallProps> = ({
               <div className="sponsor-card-top">
                 <span className="sponsor-spot-tag">Slot #{slot.id}</span>
                 <span className="sponsor-surface-tag" style={{ background: 'rgba(52, 199, 89, 0.12)', color: '#27ae60' }}>
-                  AVAILABLE
+                  OPENING SOON
                 </span>
               </div>
 
@@ -141,11 +138,11 @@ export const SponsorsWall: React.FC<SponsorsWallProps> = ({
               <p className="sponsor-card-bid" style={{ fontSize: '11px', color: 'var(--ink-2)', marginBottom: '8px' }}>
                 {slot.spot}
               </p>
-              <strong style={{ fontSize: '15px', color: 'var(--blue)' }}>
-                {currency === 'INR' ? `₹${slot.priceInr.toLocaleString('en-IN')}` : currency === 'EUR' ? `${slot.priceEur} €` : `$${slot.priceUsd}`}
+              <strong style={{ fontSize: '14px', color: 'var(--blue)' }}>
+                Pricing Coming Soon
               </strong>
               <span className="sponsor-visit-link" style={{ marginTop: '8px' }}>
-                Claim This Slot ›
+                Express Interest ›
               </span>
             </div>
           ))}
@@ -156,7 +153,7 @@ export const SponsorsWall: React.FC<SponsorsWallProps> = ({
           <div className="bmm-tiers-header">
             <h3 className="bmm-tiers-title">Sponsorship Tiers & Perks</h3>
             <p className="bmm-tiers-desc">
-              Select a sponsorship tier to secure your spot or support our mission with a custom contribution.
+              Explore our sponsorship tiers. Express your interest early to secure your spot when the campaign launches.
             </p>
           </div>
 
@@ -175,7 +172,6 @@ export const SponsorsWall: React.FC<SponsorsWallProps> = ({
                   <h4 className="tier-name">{tier.name}</h4>
                   <div className="tier-price-row">
                     <span className="tier-price">{formatPrice(tier)}</span>
-                    <span className="tier-period">/ one-time</span>
                   </div>
                 </div>
 
@@ -193,7 +189,7 @@ export const SponsorsWall: React.FC<SponsorsWallProps> = ({
                   onClick={() => onSelectTier(tier)}
                   className={`bmm-btn-tier ${tier.recommended ? 'bmm-btn-blue' : 'bmm-btn-outline'}`}
                 >
-                  Sponsor as {tier.name}
+                  Join Waitlist · {tier.name}
                 </button>
               </SpotlightCard>
             ))}
@@ -202,15 +198,15 @@ export const SponsorsWall: React.FC<SponsorsWallProps> = ({
           {/* Custom Donation Banner */}
           <div className="bmm-custom-donate-banner">
             <div>
-              <h4>Want to Support with a Custom Donation?</h4>
-              <p>Every dollar directly finances our Apple M5 Max / M5 Pro machine and VESPER startup compute with zero budget ceiling.</p>
+              <h4>Want to Support as an Early Backer?</h4>
+              <p>Every dollar directly finances our Apple M5 Max / M5 Pro machine and VESPER startup compute once sponsorships officially open.</p>
             </div>
             <button
               type="button"
               onClick={onOpenCustomDonation}
               className="bmm-btn-emerald"
             >
-              💖 Make a Custom Donation
+              💖 Join the Campaign Waitlist
             </button>
           </div>
         </div>

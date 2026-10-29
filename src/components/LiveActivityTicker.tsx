@@ -13,9 +13,9 @@ export interface ActivityItem {
 
 // Campaign milestone announcements (transparently informational, not simulated transactions)
 const CAMPAIGN_ANNOUNCEMENTS: ActivityItem[] = [
-  { id: 'ann-1', sponsor: 'VESPER Hardware Goal', amount: '$3,999 Target', spot: 'MacBook Pro 16″ (M5 Max / Pro)', status: 'Campaign Live', isReal: false },
+  { id: 'ann-1', sponsor: 'VESPER Hardware Goal', amount: 'Target Goal', spot: 'MacBook Pro 16″ (M5 Max / Pro)', status: 'Public Preview', isReal: false },
   { id: 'ann-2', sponsor: 'IRL Founder Roadshow', amount: 'Global Tech Summits', spot: 'Demo Days & VC Meetings', status: 'Scheduled', isReal: false },
-  { id: 'ann-3', sponsor: 'Sticker Spot Sponsorships', amount: '20 Total Spots', spot: 'Lid, Palm Rests, Charger & Mouse', status: 'Now Open', isReal: false }
+  { id: 'ann-3', sponsor: 'Sticker Spot Sponsorships', amount: '20 Total Spaces', spot: 'Lid, Palm Rests, Charger & Mouse', status: 'Opening Soon', isReal: false }
 ];
 
 interface LiveActivityTickerProps {
@@ -35,7 +35,7 @@ export const LiveActivityTicker: React.FC<LiveActivityTickerProps> = ({ spots, o
     .map((s) => ({
       id: `sold-${s.id}`,
       sponsor: s.sponsorName || `Spot #${s.id}`,
-      amount: `$${s.topBidUsd}`,
+      amount: 'Pricing Coming Soon',
       spot: s.name,
       status: 'Verified Sponsor! 🌟',
       isReal: true
@@ -83,7 +83,7 @@ export const LiveActivityTicker: React.FC<LiveActivityTickerProps> = ({ spots, o
           const freshItem: ActivityItem = {
             id: `live-claim-${newRecord.id}-${Date.now()}`,
             sponsor: newRecord.sponsor_name || `Spot #${newRecord.id}`,
-            amount: `$${newRecord.price_usd_cents ? Math.round(newRecord.price_usd_cents / 100) : 100}`,
+            amount: 'Pricing Coming Soon',
             spot: newRecord.name || `Spot #${newRecord.id}`,
             status: 'Verified Sponsor! 🌟',
             isReal: true

@@ -47,20 +47,26 @@ serve(async (req) => {
 
     const rawBody = await req.text();
 
-    if (webhookSecret) {
-      if (!signature) {
-        return new Response(JSON.stringify({ error: 'Missing x-razorpay-signature header' }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
-      const isValid = await verifyHmacSha256(webhookSecret, rawBody, signature);
-      if (!isValid) {
-        return new Response(JSON.stringify({ error: 'Invalid webhook signature' }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
+    if (!webhookSecret) {
+      return new Response(JSON.stringify({ error: 'Webhook secret unconfigured on server; failing closed.' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (!signature) {
+      return new Response(JSON.stringify({ error: 'Missing x-razorpay-signature header' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const isValid = await verifyHmacSha256(webhookSecret, rawBody, signature);
+    if (!isValid) {
+      return new Response(JSON.stringify({ error: 'Invalid webhook signature' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     const event = JSON.parse(rawBody);

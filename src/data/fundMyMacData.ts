@@ -531,6 +531,10 @@ export const CORNER_DATA = {
 
 export const FAQ_DATA = [
   {
+    question: 'When will sponsorships officially open?',
+    answer: 'Fund My Mac is currently in public preview while our Razorpay merchant verification is being completed. You can browse all available spaces and join the priority waitlist today. Waitlist members will receive early access before public checkout officially opens.'
+  },
+  {
     question: 'Is there a limit on the fundraising budget? What happens to extra funds raised?',
     answer: 'There is NO limit or cap on our budget! The $3,999 hardware target is our initial Phase 1 milestone to get back to building immediately. Every single dollar raised beyond the hardware cost is invested directly into building, training, and expanding the VESPER AI startup — financing cloud GPU compute clusters (NVIDIA H100/A100 SXM5), fine-tuning domain models, hosting production agent infrastructure, and funding our travel to demo days and startup conferences where our sponsors are showcased live.'
   },

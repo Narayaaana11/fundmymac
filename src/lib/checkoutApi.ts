@@ -9,6 +9,7 @@ import type {
   VerifyPaymentParams,
   VerifyPaymentResult
 } from '../server/payment/types';
+import { IS_PUBLIC_PREVIEW } from '../config/previewConfig.ts';
 
 declare global {
   interface Window {
@@ -124,6 +125,14 @@ export function getApiConfig(): ApiConfig {
 export async function initiateCheckoutSession(
   params: Omit<CreateCheckoutSessionParams, 'successUrl' | 'cancelUrl'>
 ): Promise<CheckoutSessionResult> {
+  if (IS_PUBLIC_PREVIEW) {
+    return {
+      success: false,
+      previewMode: true,
+      error: 'Sponsorship checkout is currently opening soon. Public preview is active; orders cannot be placed at this time. Please join the waitlist.'
+    };
+  }
+
   const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173';
   const successUrl = `${currentOrigin}/`;
   const cancelUrl = `${currentOrigin}/`;

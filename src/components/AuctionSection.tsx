@@ -13,7 +13,7 @@ interface AuctionSectionProps {
 }
 
 export const AuctionSection: React.FC<AuctionSectionProps> = ({
-  currency,
+  currency: _currency,
   onSpotClick,
   spots,
   isLiveSync = false
@@ -28,12 +28,8 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
     activeSpots.find((s) => s.id === 3) || BRAND_SPOTS.find((s) => s.id === 3)!  // Top Right
   ];
 
-  const formatPrice = (eur: number, usd: number, inr?: number) => {
-    if (currency === 'INR') {
-      const val = inr || Math.round(usd * 84);
-      return `₹${val.toLocaleString('en-IN')}`;
-    }
-    return currency === 'EUR' ? `${eur.toLocaleString()} €` : `$${usd.toLocaleString()}`;
+  const formatPrice = (_eur: number, _usd: number, _inr?: number) => {
+    return 'Pricing Coming Soon';
   };
 
   const filteredSpots = activeSpots.filter((spot) => {
@@ -55,19 +51,19 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
             <span style={{ background: isLiveSync ? '#34c759' : '#8e8e93' }} />
             <span style={{ background: isLiveSync ? 'rgba(52, 199, 89, 0.4)' : 'rgba(142, 142, 147, 0.4)' }} />
           </span>
-          <span>· {openSpotsCount} of {activeSpots.length} Sticker Spots Open for Sponsorship</span>
+          <span>· {openSpotsCount} of {activeSpots.length} Sticker Spaces Opening Soon</span>
           <span className="bmm-badge-divider">|</span>
           <span className="bmm-bids-count-pill">
-            {isLiveSync ? 'Live Reserve' : 'Canonical Catalog (Offline)'}
+            Public Preview
           </span>
         </div>
 
-        <h2 className="bmm-auction-h2">Available Spots on the Mac</h2>
+        <h2 className="bmm-auction-h2">Available Spaces on the Mac</h2>
         <p className="bmm-auction-desc">
-          Every spot travels with us to conferences, demo days, and founder meetings. Click any spot to secure your placement.
+          Every space travels with us to conferences, demo days, and founder meetings. Click any space to inspect perks and join the waitlist.
         </p>
         <p className="bmm-auction-pricing-note">
-          Lid spots from {currency === 'INR' ? '₹8,500' : currency === 'EUR' ? '90 €' : '$100'} Small · {currency === 'INR' ? '₹15,000' : currency === 'EUR' ? '160 €' : '$175'} Medium · {currency === 'INR' ? '₹21,000' : currency === 'EUR' ? '230 €' : '$250'} Large · {currency === 'INR' ? '₹42,000' : currency === 'EUR' ? '460 €' : '$500'} Prime Marquee. Palm rest & accessory spots starting at {currency === 'INR' ? '₹8,000' : currency === 'EUR' ? '70 €' : '$75'}.
+          Sponsorship pricing and reservation details will be announced once the campaign officially opens. Join the waitlist for priority access.
         </p>
 
         {/* Featured Prime Positions SpotlightCard */}
@@ -131,7 +127,7 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
                         onSpotClick(spot);
                       }}
                     >
-                      Claim Spot
+                      Coming Soon
                     </button>
                   )}
                 </div>
@@ -173,7 +169,7 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
               All Spots Directory ({filteredSpots.length} spots shown)
             </h3>
             <span style={{ fontSize: '12px', color: 'var(--ink-2)' }}>
-              Click any row to sponsor / claim
+              Click any space to inspect details and join the waitlist
             </span>
           </div>
 
@@ -219,7 +215,7 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
                       className="bmm-sold-badge"
                       style={{ background: 'rgba(52, 199, 89, 0.12)', color: '#27ae60', borderColor: 'rgba(52, 199, 89, 0.3)' }}
                     >
-                      Available
+                      Opening Soon
                     </span>
                   )}
                 </div>

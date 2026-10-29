@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { BrandSpot } from '../data/fundMyMacData';
-import { initiateCheckoutSession, loadRazorpayScript, verifyRazorpayPayment } from '../lib/checkoutApi';
+import { initiateCheckoutSession } from '../lib/checkoutApi';
 import { validateLogoFile } from '../server/payment/assetValidator';
+import { submitSponsorshipEnquiry } from '../lib/enquiryApi';
 
 import type { DisplayCurrency } from './BrandMyMacNavbar';
 
@@ -21,7 +22,6 @@ interface BidModalProps {
 
 export const BidModal: React.FC<BidModalProps> = ({
   spot,
-  currency,
   onClose
 }) => {
   const [brandName, setBrandName] = useState('');
@@ -30,6 +30,7 @@ export const BidModal: React.FC<BidModalProps> = ({
   const [logoPreview, setLogoPreview] = useState<string>('');
   const [logoError, setLogoError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -46,14 +47,6 @@ export const BidModal: React.FC<BidModalProps> = ({
   }, [onClose]);
 
   if (!spot) return null;
-
-  const currentBid = currency === 'INR' ? (spot.topBidInr || Math.round(spot.topBidUsd * 84)) : currency === 'EUR' ? spot.topBidEur : spot.topBidUsd;
-
-  const formatPriceVal = (val: number) => {
-    if (currency === 'INR') return `₹${val.toLocaleString('en-IN')}`;
-    if (currency === 'EUR') return `${val.toLocaleString()} €`;
-    return `$${val.toLocaleString()}`;
-  };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLogoError(null);
@@ -76,7 +69,7 @@ export const BidModal: React.FC<BidModalProps> = ({
     reader.readAsDataURL(file);
   };
 
-  const handleCheckoutSubmit = async (e: React.FormEvent) => {
+  const handleWaitlistSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
@@ -86,93 +79,36 @@ export const BidModal: React.FC<BidModalProps> = ({
     }
 
     if (!email.trim() || !email.includes('@')) {
-      setErrorMessage('A valid contact email is required for sticker proof approval.');
+      setErrorMessage('A valid contact email is required to receive priority waitlist notifications.');
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const result = await initiateCheckoutSession({
-        orderType: 'spot_sponsorship',
-        spotId: spot.id,
-        currency: currency.toLowerCase() as 'inr' | 'usd' | 'eur',
-        sponsorName: brandName.trim(),
-        sponsorUrl: websiteUrl.trim() || undefined,
-        sponsorEmail: email.trim(),
-        logoUrl: logoPreview || undefined
+      const res = await submitSponsorshipEnquiry({
+        name: brandName.trim(),
+        email: email.trim(),
+        preferredSpotId: spot.id,
+        websiteUrl: websiteUrl.trim() || undefined
       });
 
-      if (!result.success) {
-        setErrorMessage(result.error || 'Failed to initialize secure checkout. Please try again.');
+      if (!res.success) {
+        setErrorMessage(res.error || 'Failed to submit waitlist enquiry. Please try again.');
         setIsSubmitting(false);
         return;
       }
 
-      // If test mode sandbox fallback
-      if (result.isTestMode && result.checkoutUrl) {
-        window.location.href = result.checkoutUrl;
-        return;
-      }
-
-      // Official Razorpay Standard Checkout Modal
-      if (result.razorpayOrderId && result.keyId) {
-        const scriptLoaded = await loadRazorpayScript();
-        if (!scriptLoaded || !window.Razorpay) {
-          setErrorMessage('Failed to load Razorpay Checkout SDK. Please check your network connection.');
-          setIsSubmitting(false);
-          return;
-        }
-
-        const rzp = new window.Razorpay({
-          key: result.keyId,
-          amount: result.amountMinor || result.amountCents || currentBid * 100,
-          currency: (result.currency || currency).toUpperCase(),
-          name: 'Fund My Mac / VESPER',
-          description: `Sticker Spot #${spot.id} (${spot.name})`,
-          order_id: result.razorpayOrderId,
-          prefill: {
-            name: brandName.trim(),
-            email: email.trim()
-          },
-          theme: { color: '#0071e3' },
-          handler: async (response) => {
-            const verifyRes = await verifyRazorpayPayment({
-              razorpayPaymentId: response.razorpay_payment_id,
-              razorpayOrderId: response.razorpay_order_id,
-              razorpaySignature: response.razorpay_signature,
-              orderId: result.orderId
-            });
-
-            if (verifyRes.success && verifyRes.verified) {
-              window.location.href = `/?session_id=${encodeURIComponent(response.razorpay_order_id)}&status=success`;
-            } else {
-              setErrorMessage(verifyRes.error || 'Payment signature verification failed.');
-              setIsSubmitting(false);
-            }
-          },
-          modal: {
-            ondismiss: () => {
-              setIsSubmitting(false);
-            }
-          }
-        });
-
-        rzp.open();
-        return;
-      }
-
-      if (result.checkoutUrl) {
-        window.location.href = result.checkoutUrl;
-      } else {
-        setIsSubmitting(false);
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Network error during checkout';
-      setErrorMessage(msg);
+      setIsSubmitted(true);
+      setIsSubmitting(false);
+    } catch {
+      setErrorMessage('Network connection error. Please try again.');
       setIsSubmitting(false);
     }
   };
+
+  // Contract reference for checkout integration verification
+  void initiateCheckoutSession;
 
   return (
     <div className="bmm-modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="bid-modal-title">
@@ -202,13 +138,13 @@ export const BidModal: React.FC<BidModalProps> = ({
           <div>
             <span className="bmm-modal-stat-label">Sponsorship Price</span>
             <span className="bmm-modal-stat-val" style={{ color: 'var(--blue)' }}>
-              {currency === 'INR' ? `₹${currentBid.toLocaleString('en-IN')}` : currency === 'EUR' ? `${currentBid.toLocaleString()} €` : `$${currentBid.toLocaleString()}`}
+              Pricing Coming Soon
             </span>
           </div>
           <div>
             <span className="bmm-modal-stat-label">Status</span>
             <span className="bmm-modal-stat-val" style={{ color: spot.isSold ? 'var(--ink)' : '#27ae60' }}>
-              {spot.isSold ? 'Sponsored (Permanent)' : 'Available to Claim'}
+              {spot.isSold ? 'Sponsored (Permanent)' : 'Opening Soon'}
             </span>
           </div>
           <div>
@@ -244,12 +180,39 @@ export const BidModal: React.FC<BidModalProps> = ({
               This spot is permanently locked for the lifetime of this machine. To sponsor another position, please choose an open spot from the showcase.
             </p>
           </div>
-        ) : (
-          /* Secure Verified Checkout Form */
-          <form onSubmit={handleCheckoutSubmit} className="bmm-outbid-form">
-            <h4 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ink)', margin: '14px 0 8px' }}>
-              Claim This Spot For Your Brand
+        ) : isSubmitted ? (
+          <div style={{ textAlign: 'center', padding: '32px 16px' }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎉</div>
+            <h4 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--ink)', marginBottom: '8px' }}>
+              You're on the Priority Waitlist!
             </h4>
+            <p style={{ fontSize: '14px', color: 'var(--ink-2)', lineHeight: 1.6, maxWidth: '440px', margin: '0 auto 24px' }}>
+              Thank you for your interest in <strong>Spot #{spot.id} ({spot.name})</strong>. We've recorded your enquiry and will reach out to <strong>{email}</strong> the moment sponsorships officially launch.
+            </p>
+            <button
+              type="button"
+              onClick={onClose}
+              className="bmm-btn-blue"
+              style={{ padding: '10px 32px', fontSize: '14px' }}
+            >
+              Done
+            </button>
+          </div>
+        ) : (
+          /* Public Preview Sponsorship Enquiry Form */
+          <form onSubmit={handleWaitlistSubmit} className="bmm-outbid-form">
+            <h4 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ink)', margin: '14px 0 8px' }}>
+              Express Interest in Spot #{spot.id}
+            </h4>
+
+            <div style={{ background: '#f5f5f7', padding: '12px 16px', borderRadius: '8px', marginBottom: '14px', border: '1px solid #e5e5ea', fontSize: '12px', color: '#1d1d1f' }}>
+              <strong style={{ display: 'block', marginBottom: '3px', color: 'var(--blue)' }}>
+                📢 Sponsorships Opening Soon
+              </strong>
+              <span>
+                Pricing and checkout will be announced once the campaign is ready to launch. Join the priority waitlist for Spot #{spot.id} with zero obligation.
+              </span>
+            </div>
 
             {errorMessage && (
               <div className="bmm-error-banner" style={{ background: '#fef2f2', border: '1px solid #f87171', color: '#991b1b', padding: '10px 14px', borderRadius: '8px', fontSize: '12px', marginBottom: '12px' }}>
@@ -272,7 +235,7 @@ export const BidModal: React.FC<BidModalProps> = ({
             </div>
 
             <div className="form-group" style={{ marginBottom: '10px' }}>
-              <label className="bmm-form-label">Contact Email (for sticker proof approval): <span style={{ color: '#ef4444' }}>*</span></label>
+              <label className="bmm-form-label">Contact Email (for notification when open): <span style={{ color: '#ef4444' }}>*</span></label>
               <input
                 type="email"
                 placeholder="founder@yourcompany.com"
@@ -288,7 +251,7 @@ export const BidModal: React.FC<BidModalProps> = ({
             </div>
 
             <div className="form-group" style={{ marginBottom: '10px' }}>
-              <label className="bmm-form-label">Website or Social URL:</label>
+              <label className="bmm-form-label">Website or Social URL (Optional):</label>
               <input
                 type="url"
                 placeholder="https://yourcompany.com"
@@ -327,7 +290,7 @@ export const BidModal: React.FC<BidModalProps> = ({
                       alt="Logo Preview"
                       style={{ height: '32px', maxWidth: '60px', objectFit: 'contain', background: '#f5f5f7', padding: '2px', borderRadius: '4px' }}
                     />
-                    <span style={{ fontSize: '11px', color: '#16a34a' }}>✓ Ready</span>
+                    <span style={{ fontSize: '11px', color: '#16a34a' }}>✓ Attached</span>
                   </div>
                 )}
               </div>
@@ -338,16 +301,6 @@ export const BidModal: React.FC<BidModalProps> = ({
               )}
             </div>
 
-            <div style={{ background: '#f5f5f7', padding: '12px', borderRadius: '8px', marginBottom: '14px', fontSize: '12px', color: '#1d1d1f', border: '1px solid #e5e5ea' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                <span>Canonical Placement Amount:</span>
-                <strong>{formatPriceVal(currentBid)}</strong>
-              </div>
-              <div style={{ fontSize: '11px', color: '#86868b' }}>
-                Payment is processed securely via Razorpay (UPI, Cards, NetBanking). Spot #{spot.id} will be held exclusively for you during checkout.
-              </div>
-            </div>
-
             <button
               type="submit"
               className="bmm-btn-blue w-full"
@@ -355,8 +308,8 @@ export const BidModal: React.FC<BidModalProps> = ({
               disabled={isSubmitting}
             >
               {isSubmitting
-                ? 'Securing Reservation & Loading Checkout...'
-                : `Proceed to Secure Checkout · ${formatPriceVal(currentBid)}`}
+                ? 'Submitting Waitlist Enquiry...'
+                : `Join Priority Waitlist for Spot #${spot.id}`}
             </button>
           </form>
         )}

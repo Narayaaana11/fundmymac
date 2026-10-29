@@ -224,15 +224,41 @@ export const App: React.FC = () => {
       <main>
         {/* Hero Section */}
         <header className="bmm-hero">
+          {/* Public Preview Notification Banner */}
+          <div className="bmm-pill-badge-green" style={{ marginBottom: '16px', background: 'rgba(0, 113, 227, 0.1)', color: '#0071e3', border: '1px solid rgba(0, 113, 227, 0.25)' }}>
+            <span>🌟 PUBLIC PREVIEW · SPONSORSHIPS OPENING SOON</span>
+          </div>
+
           {/* Real-time WebSocket Metrics Row */}
           <RealtimeMetricsRow spots={spots} />
 
           <h1 className="bmm-h1">
-            Your brand, on my Mac.
+            Fund My Mac
           </h1>
-          <p className="bmm-hero-sub">
-            Your logo travels with me on a founder’s best friend: the MacBook.
+          <p className="bmm-hero-sub" style={{ fontSize: '20px', fontWeight: 600, color: 'var(--ink)' }}>
+            Be part of the beginning.
           </p>
+          <p className="bmm-hero-sub" style={{ maxWidth: '640px', margin: '0 auto 20px', fontSize: '16px', lineHeight: 1.6 }}>
+            We're preparing a new sponsorship campaign. Explore the available spaces, express your interest, and be among the first to hear when sponsorships officially open.
+          </p>
+
+          {/* Supporting Public Preview Notice Card */}
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(0, 113, 227, 0.06), rgba(52, 199, 89, 0.06))',
+            border: '1px solid rgba(0, 113, 227, 0.2)',
+            borderRadius: '12px',
+            padding: '14px 20px',
+            maxWidth: '620px',
+            margin: '0 auto 28px',
+            textAlign: 'center'
+          }}>
+            <strong style={{ display: 'block', fontSize: '15px', color: 'var(--ink)', marginBottom: '4px' }}>
+              📢 Sponsorships opening soon
+            </strong>
+            <span style={{ fontSize: '13px', color: 'var(--ink-2)' }}>
+              Pricing and checkout will be announced once the campaign is ready to launch.
+            </span>
+          </div>
 
           {/* Funding Progress Bar */}
           <div className="bmm-progress-wrap">
@@ -242,7 +268,7 @@ export const App: React.FC = () => {
                 <span>raised</span>
               </span>
               <span className="bmm-progress-goal">
-                hardware goal · <strong className="tabular-nums">{percentProgress}% funded</strong>
+                hardware goal · <strong className="tabular-nums">Pricing Coming Soon</strong>
               </span>
             </div>
 
@@ -286,9 +312,17 @@ export const App: React.FC = () => {
               type="button"
               onClick={() => handleOpenDonate()}
               className="bmm-btn-blue"
+              style={{ padding: '12px 24px', fontSize: '15px' }}
             >
-              💖 Fund This Mac / Sponsor
+              💖 Join the Waitlist
             </button>
+            <a
+              href="#macbook-showcase"
+              className="bmm-btn-outline"
+              style={{ textDecoration: 'none', padding: '12px 20px', fontSize: '14px', borderRadius: '980px', display: 'inline-flex', alignItems: 'center' }}
+            >
+              Explore Sponsorship Spaces
+            </a>
             <a href="#vesper-mission" className="bmm-link-how">
               Read the VESPER story ›
             </a>
