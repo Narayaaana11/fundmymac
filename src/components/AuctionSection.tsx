@@ -36,6 +36,8 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
     return matchesSurface && matchesSearch;
   });
 
+  const openSpotsCount = activeSpots.filter((s) => !s.isSold).length;
+
   return (
     <section id="spots" className="bmm-auction-section">
       <div className="bmm-auction-inner">
@@ -45,7 +47,7 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
             <span />
             <span />
           </span>
-          <span>· 20 of 20 Sticker Spots Open for Sponsorship</span>
+          <span>· {openSpotsCount} of {activeSpots.length} Sticker Spots Open for Sponsorship</span>
           <span className="bmm-badge-divider">|</span>
           <span className="bmm-bids-count-pill">Live Reserve</span>
         </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { SponsorTier } from '../data/fundMyMacData';
-import confetti from 'canvas-confetti';
+import { initiateCheckoutSession } from '../lib/checkoutApi';
 
 interface DonationModalProps {
   isOpen: boolean;
@@ -14,25 +14,18 @@ export const DonationModal: React.FC<DonationModalProps> = ({
   isOpen,
   selectedTier,
   currency,
-  onClose,
-  onConfirmDonation
+  onClose
 }) => {
-  const [customAmount, setCustomAmount] = useState<number>(
-    selectedTier ? (currency === 'EUR' ? selectedTier.priceEur : selectedTier.priceUsd) : 50
-  );
+  const [customAmount, setCustomAmount] = useState<number>(50);
   const [sponsorName, setSponsorName] = useState('');
+  const [sponsorEmail, setSponsorEmail] = useState('');
   const [sponsorUrl, setSponsorUrl] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'applepay' | 'crypto' | 'upi'>('card');
-  const [isSuccess, setIsSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (selectedTier) {
-      const timer = setTimeout(() => {
-        setCustomAmount(currency === 'EUR' ? selectedTier.priceEur : selectedTier.priceUsd);
-      }, 0);
-      return () => clearTimeout(timer);
-    }
-  }, [selectedTier, currency]);
+  const effectiveAmount = selectedTier
+    ? (currency === 'EUR' ? selectedTier.priceEur : selectedTier.priceUsd)
+    : customAmount;
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -46,19 +39,51 @@ export const DonationModal: React.FC<DonationModalProps> = ({
 
   const currencySymbol = currency === 'EUR' ? '€' : '$';
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (onConfirmDonation) {
-      const amountUsd = currency === 'EUR' ? Math.round(customAmount * 1.09) : customAmount;
-      const amountEur = currency === 'EUR' ? customAmount : Math.round(customAmount * 0.92);
-      onConfirmDonation(amountUsd, amountEur, sponsorName.trim() || 'Anonymous Supporter', sponsorUrl.trim());
+    setErrorMessage(null);
+
+    if (!sponsorName.trim()) {
+      setErrorMessage('Please provide your name or company name.');
+      return;
     }
-    setIsSuccess(true);
-    confetti({
-      particleCount: 120,
-      spread: 80,
-      origin: { y: 0.6 }
-    });
+
+    if (!sponsorEmail.trim() || !sponsorEmail.includes('@')) {
+      setErrorMessage('A valid email address is required for donation receipt.');
+      return;
+    }
+
+    if (!selectedTier && customAmount < 5) {
+      setErrorMessage('Minimum contribution is 5 ' + currencySymbol);
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const result = await initiateCheckoutSession({
+        orderType: selectedTier ? 'tier_sponsorship' : 'custom_donation',
+        tierId: selectedTier?.id,
+        customAmountCents: selectedTier ? undefined : customAmount * 100,
+        currency: currency.toLowerCase() as 'usd' | 'eur',
+        sponsorName: sponsorName.trim(),
+        sponsorEmail: sponsorEmail.trim(),
+        sponsorUrl: sponsorUrl.trim() || undefined
+      });
+
+      if (!result.success || !result.checkoutUrl) {
+        setErrorMessage(result.error || 'Failed to initialize secure checkout. Please try again.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Redirect to provider checkout
+      window.location.href = result.checkoutUrl;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Network error during checkout';
+      setErrorMessage(msg);
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -69,198 +94,125 @@ export const DonationModal: React.FC<DonationModalProps> = ({
           onClick={onClose}
           className="bmm-modal-close"
           aria-label="Close"
+          disabled={isSubmitting}
         >
           ✕
         </button>
 
-        {!isSuccess ? (
-          <>
-            <div className="bmm-modal-header-badge">
-              <span className="modal-pill-tag">
-                {selectedTier ? `TIER: ${selectedTier.name.toUpperCase()}` : 'CUSTOM DONATION'}
-              </span>
-            </div>
+        <div className="bmm-modal-header-badge">
+          <span className="modal-pill-tag">
+            {selectedTier ? `TIER: ${selectedTier.name.toUpperCase()}` : 'BACKER CONTRIBUTION'}
+          </span>
+        </div>
 
-            <h3 className="bmm-modal-title">
-              {selectedTier ? `Sponsor as ${selectedTier.name}` : 'Support Fund My Mac'}
-            </h3>
-            <p className="bmm-modal-subtitle">
-              Help us fund the MacBook Pro 16″ (Apple M5 Max / M5 Pro) to build and ship VESPER. With no budget limit, all surplus funds fuel startup GPU compute and roadshows!
-            </p>
+        <h3 className="bmm-modal-title">
+          {selectedTier ? `Sponsor as ${selectedTier.name}` : 'Support Fund My Mac'}
+        </h3>
+        <p className="bmm-modal-subtitle">
+          Help us fund the MacBook Pro 16″ (Apple M5 Max / M5 Pro) to build and ship VESPER. 100% of all contributions fuel developer roadshows and AI compute.
+        </p>
 
-            <form onSubmit={handleSubmit} className="bmm-donation-form">
-              {/* Quick Amount Chips */}
-              <div className="donation-amount-section">
-                <label className="bmm-form-label">Contribution Amount ({currencySymbol}):</label>
-                <div className="quick-amount-chips">
-                  {[25, 50, 150, 250, 500, 1500].map((amt) => (
-                    <button
-                      key={amt}
-                      type="button"
-                      onClick={() => setCustomAmount(amt)}
-                      className={`amount-chip ${customAmount === amt ? 'active' : ''}`}
-                    >
-                      {amt} {currencySymbol}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="custom-amt-input-wrap">
-                  <span className="curr-sym">{currencySymbol}</span>
-                  <input
-                    type="number"
-                    min="5"
-                    value={customAmount}
-                    onChange={(e) => setCustomAmount(Math.max(5, Number(e.target.value)))}
-                    className="custom-amt-field"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Sponsor Information */}
-              <div className="sponsor-info-fields">
-                <div className="form-group">
-                  <label className="bmm-form-label">Company or Backer Name:</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Supabase, Acme AI, or Vincent"
-                    value={sponsorName}
-                    onChange={(e) => setSponsorName(e.target.value)}
-                    className="bmm-input-field"
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="bmm-form-label">Website or Social Link:</label>
-                  <input
-                    type="url"
-                    placeholder="https://yourcompany.com"
-                    value={sponsorUrl}
-                    onChange={(e) => setSponsorUrl(e.target.value)}
-                    className="bmm-input-field"
-                  />
-                </div>
-              </div>
-
-              {/* Payment Methods */}
-              <div className="payment-method-selector">
-                <label className="bmm-form-label">Payment Option:</label>
-                <div className="payment-options-grid">
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('card')}
-                    className={`pay-option ${paymentMethod === 'card' ? 'active' : ''}`}
-                  >
-                    💳 Stripe / Card
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('applepay')}
-                    className={`pay-option ${paymentMethod === 'applepay' ? 'active' : ''}`}
-                  >
-                    🍏 Apple Pay
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('crypto')}
-                    className={`pay-option ${paymentMethod === 'crypto' ? 'active' : ''}`}
-                  >
-                    🪙 Crypto / Web3
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('upi')}
-                    className={`pay-option ${paymentMethod === 'upi' ? 'active' : ''}`}
-                  >
-                    🇮🇳 UPI Transfer
-                  </button>
-                </div>
-
-                {/* Stripe Checkout Link Option */}
-                {(paymentMethod === 'card' || paymentMethod === 'applepay') && (
-                  <div style={{ background: '#f5f5f7', padding: '10px 12px', borderRadius: '8px', marginTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid #e5e5ea' }}>
-                    <div style={{ fontSize: '11px', color: '#1d1d1f' }}>
-                      <strong>Instant Stripe Checkout:</strong>
-                      <span style={{ display: 'block', color: '#86868b' }}>Pay via credit card or Apple Pay.</span>
-                    </div>
-                    <a
-                      href={import.meta.env.VITE_STRIPE_PAYMENT_LINK || 'https://buy.stripe.com/'}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="bmm-btn-blue"
-                      style={{ fontSize: '11px', padding: '6px 12px', background: '#635bff', whiteSpace: 'nowrap', textDecoration: 'none' }}
-                    >
-                      Open Stripe ↗
-                    </a>
-                  </div>
-                )}
-              </div>
-
-              {/* Summary & Submit */}
-              <div className="donation-total-summary">
-                <span>Total to Fund:</span>
-                <strong>{customAmount.toLocaleString()} {currencySymbol}</strong>
-              </div>
-
-              <button type="submit" className="bmm-btn-blue w-full">
-                Confirm & Back Fund My Mac ({customAmount.toLocaleString()} {currencySymbol})
-              </button>
-            </form>
-          </>
-        ) : (
-          /* Success Screen */
-          <div className="bmm-modal-success-box">
-            <div className="bmm-success-icon-ring">✓</div>
-            <h3 className="bmm-modal-title" style={{ marginTop: '16px' }}>
-              Thank You for Backing Us!
-            </h3>
-            <p className="bmm-modal-subtitle" style={{ maxWidth: '400px', margin: '8px auto 16px auto' }}>
-              Your sponsorship of <strong>{customAmount.toLocaleString()} {currencySymbol}</strong> for <strong>{sponsorName || 'your company'}</strong> has been recorded! Your logo and website are now queued for the official Sponsors Wall and MacBook Pro roadshow.
-            </p>
-
-            {/* Viral Share on X (Twitter) Button */}
-            <a
-              href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
-                `I just backed Fund My Mac & @VESPER to power the founder roadshow and build the future of AI! 💖 Check it out:`
-              )}&url=${encodeURIComponent('https://fundmymac.com')}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bmm-btn-share-x"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                background: '#000000',
-                color: '#ffffff',
-                padding: '11px 0',
-                borderRadius: '9999px',
-                fontWeight: 600,
-                fontSize: '13px',
-                textDecoration: 'none',
-                marginBottom: '10px',
-                width: '100%',
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)'
-              }}
-            >
-              <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
-                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-              </svg>
-              Share on X (Twitter)
-            </a>
-
-            <button
-              type="button"
-              onClick={onClose}
-              className="bmm-btn-secondary"
-              style={{ width: '100%', padding: '9px 0', borderRadius: '9999px', border: '1px solid #d2d2d7', background: '#fff', fontSize: '13px', cursor: 'pointer' }}
-            >
-              Done & Return to MacBook
-            </button>
+        {errorMessage && (
+          <div style={{ background: '#fef2f2', border: '1px solid #f87171', color: '#991b1b', padding: '10px 14px', borderRadius: '8px', fontSize: '12px', margin: '10px 0' }}>
+            ⚠️ {errorMessage}
           </div>
         )}
+
+        <form onSubmit={handleSubmit} className="bmm-donation-form">
+          {/* Quick Amount Chips (Only for Custom Donation) */}
+          {!selectedTier && (
+            <div className="donation-amount-section">
+              <label className="bmm-form-label">Contribution Amount ({currencySymbol}):</label>
+              <div className="quick-amount-chips">
+                {[25, 50, 100, 250, 500, 1000].map((amt) => (
+                  <button
+                    key={amt}
+                    type="button"
+                    onClick={() => setCustomAmount(amt)}
+                    className={`amount-chip ${customAmount === amt ? 'active' : ''}`}
+                    disabled={isSubmitting}
+                  >
+                    {amt} {currencySymbol}
+                  </button>
+                ))}
+              </div>
+
+              <div className="custom-amt-input-wrap">
+                <span className="curr-sym">{currencySymbol}</span>
+                <input
+                  type="number"
+                  min="5"
+                  value={customAmount}
+                  onChange={(e) => setCustomAmount(Math.max(5, Number(e.target.value)))}
+                  className="custom-amt-field"
+                  required
+                  disabled={isSubmitting}
+                />
+              </div>
+            </div>
+          )}
+
+          {selectedTier && (
+            <div style={{ background: '#f5f5f7', padding: '12px', borderRadius: '8px', margin: '12px 0', border: '1px solid #e5e5ea' }}>
+              <span style={{ fontSize: '11px', color: '#86868b', textTransform: 'uppercase' }}>Selected Tier Amount:</span>
+              <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--blue)' }}>
+                {effectiveAmount.toLocaleString()} {currencySymbol}
+              </div>
+            </div>
+          )}
+
+          <div className="form-group" style={{ marginBottom: '10px' }}>
+            <label className="bmm-form-label">Backer Name or Organization: <span style={{ color: '#ef4444' }}>*</span></label>
+            <input
+              type="text"
+              placeholder="e.g. Satoshi Nakamoto or Acme Corp"
+              value={sponsorName}
+              onChange={(e) => setSponsorName(e.target.value)}
+              className="bmm-input-field"
+              required
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <div className="form-group" style={{ marginBottom: '10px' }}>
+            <label className="bmm-form-label">Contact Email (for payment receipt & private updates): <span style={{ color: '#ef4444' }}>*</span></label>
+            <input
+              type="email"
+              placeholder="you@domain.com"
+              value={sponsorEmail}
+              onChange={(e) => setSponsorEmail(e.target.value)}
+              className="bmm-input-field"
+              required
+              disabled={isSubmitting}
+            />
+            <span style={{ fontSize: '11px', color: 'var(--ink-2)', display: 'block', marginTop: '3px' }}>
+              🔒 Kept private. Never displayed on the public sponsors wall.
+            </span>
+          </div>
+
+          <div className="form-group" style={{ marginBottom: '14px' }}>
+            <label className="bmm-form-label">Website or Profile Link (Optional):</label>
+            <input
+              type="url"
+              placeholder="https://x.com/yourhandle or https://company.com"
+              value={sponsorUrl}
+              onChange={(e) => setSponsorUrl(e.target.value)}
+              className="bmm-input-field"
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="bmm-btn-blue w-full"
+            style={{ padding: '13px 0', fontSize: '14px', opacity: isSubmitting ? 0.7 : 1 }}
+            disabled={isSubmitting}
+          >
+            {isSubmitting
+              ? 'Opening Secure Stripe Checkout...'
+              : `Proceed to Pay ${effectiveAmount.toLocaleString()} ${currencySymbol}`}
+          </button>
+        </form>
       </div>
     </div>
   );

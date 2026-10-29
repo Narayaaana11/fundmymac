@@ -1,7 +1,19 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type { SponsorTier } from '../data/fundMyMacData';
 import { SPONSOR_TIERS } from '../data/fundMyMacData';
 import { SpotlightCard } from './SpotlightCard';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+
+interface ConfirmedSponsor {
+  order_id: string;
+  sponsor_name: string;
+  sponsor_url?: string;
+  logo_url?: string;
+  amount_cents: number;
+  currency: string;
+  tier_id?: string;
+  spot_id?: number;
+}
 
 interface SponsorsWallProps {
   currency: 'EUR' | 'USD';
@@ -14,6 +26,21 @@ export const SponsorsWall: React.FC<SponsorsWallProps> = ({
   onSelectTier,
   onOpenCustomDonation
 }) => {
+  const [confirmedSponsors, setConfirmedSponsors] = useState<ConfirmedSponsor[]>([]);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) return;
+    supabase
+      .from('public_sponsors_wall')
+      .select('order_id, sponsor_name, sponsor_url, logo_url, amount_cents, currency, tier_id, spot_id')
+      .limit(20)
+      .then(({ data, error }) => {
+        if (!error && data) {
+          setConfirmedSponsors(data);
+        }
+      });
+  }, []);
+
   const foundingSlots = [
     { id: 1, title: 'Marquee Title Partner', priceUsd: 500, priceEur: 460, spot: 'Above Apple Logo · Highest IRL Visibility' },
     { id: 2, title: 'Lid Prime Partner', priceUsd: 250, priceEur: 230, spot: 'MacBook Pro Aluminum Lid · Demo Days' },
@@ -35,10 +62,57 @@ export const SponsorsWall: React.FC<SponsorsWallProps> = ({
 
         <h2 className="bmm-section-title">Founding Partners & Backers</h2>
         <p className="bmm-section-subtitle">
-          Be among the first visionary tech companies and developers on our MacBook Pro. Your logo and company receive permanent placement on this wall and in the VESPER ecosystem.
+          Be among the visionary tech companies and developers backing our MacBook Pro. Your logo and company receive permanent placement on this wall and across the VESPER ecosystem.
         </p>
 
-        {/* Founding Sponsor Slots */}
+        {/* Confirmed Verified Sponsors (if any) */}
+        {confirmedSponsors.length > 0 && (
+          <div style={{ marginBottom: '36px' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#16a34a', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span>✓ Verified Confirmed Partners ({confirmedSponsors.length})</span>
+            </h3>
+            <div className="bmm-sponsors-logo-grid">
+              {confirmedSponsors.map((sponsor) => (
+                <div key={sponsor.order_id} className="bmm-sponsor-card" style={{ background: '#ffffff', boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}>
+                  <div className="sponsor-card-top">
+                    <span className="sponsor-spot-tag">{sponsor.spot_id ? `Spot #${sponsor.spot_id}` : 'Backer Tier'}</span>
+                    <span className="sponsor-surface-tag" style={{ background: 'rgba(52, 199, 89, 0.15)', color: '#16a34a', fontWeight: 700 }}>
+                      CONFIRMED
+                    </span>
+                  </div>
+
+                  <div className="sponsor-placeholder-logo" style={{ margin: '12px 0', border: 'none', background: '#f5f5f7' }}>
+                    {sponsor.logo_url ? (
+                      <img src={sponsor.logo_url} alt={sponsor.sponsor_name} style={{ maxHeight: '42px', maxWidth: '80%', objectFit: 'contain' }} />
+                    ) : (
+                      <span style={{ fontSize: '18px', fontWeight: 700, color: 'var(--blue)' }}>
+                        {sponsor.sponsor_name.charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+
+                  <h4 className="sponsor-card-name">{sponsor.sponsor_name}</h4>
+                  <strong style={{ fontSize: '14px', color: 'var(--blue)' }}>
+                    {(sponsor.amount_cents / 100).toLocaleString()} {sponsor.currency.toUpperCase()}
+                  </strong>
+                  {sponsor.sponsor_url && (
+                    <a
+                      href={sponsor.sponsor_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="sponsor-visit-link"
+                      style={{ marginTop: '6px' }}
+                    >
+                      Visit Website ↗
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Founding Sponsor Open Slots */}
         <div className="bmm-sponsors-logo-grid" style={{ marginBottom: '44px' }}>
           {foundingSlots.map((slot) => (
             <div

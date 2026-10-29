@@ -1,4 +1,4 @@
-// Comprehensive End-to-End Audit & Verification Test Suite for Fund My Mac
+// Comprehensive End-to-End Audit & Verification Test Suite for Fund My Mac (Hardened Architecture)
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 
@@ -34,13 +34,14 @@ requiredAssets.forEach((assetPath) => {
   assert(existsSync(fullPath), `Asset Check: ${assetPath} exists`);
 });
 
-// TEST 2: Environment Configuration (.env)
-const envPath = resolve('.env');
-assert(existsSync(envPath), '.env file exists');
-const envContent = readFileSync(envPath, 'utf-8');
-assert(envContent.includes('VITE_SUPABASE_URL=https://lavydeusonwqjrlhtqzv.supabase.co'), 'Supabase URL configured in .env');
-assert(envContent.includes('VITE_SUPABASE_ANON_KEY=sb_publishable_8hUFRkUIQi-HZwm5IXBtNg_zbUrrO1y'), 'Supabase publishable key configured in .env');
-assert(envContent.includes('VITE_STRIPE_PAYMENT_LINK='), 'Stripe checkout link variable present in .env');
+// TEST 2: Environment Configuration (.env.example)
+const envExamplePath = resolve('.env.example');
+assert(existsSync(envExamplePath), '.env.example file exists');
+const envExampleContent = readFileSync(envExamplePath, 'utf-8');
+assert(envExampleContent.includes('VITE_SUPABASE_URL'), 'VITE_SUPABASE_URL documented in .env.example');
+assert(envExampleContent.includes('VITE_SUPABASE_ANON_KEY'), 'VITE_SUPABASE_ANON_KEY documented in .env.example');
+assert(envExampleContent.includes('STRIPE_SECRET_KEY'), 'STRIPE_SECRET_KEY server secret documented in .env.example');
+assert(envExampleContent.includes('STRIPE_WEBHOOK_SECRET'), 'STRIPE_WEBHOOK_SECRET server secret documented in .env.example');
 
 // TEST 3: Spot Data Model Verification (fundMyMacData.ts)
 const dataContent = readFileSync(resolve('src/data/fundMyMacData.ts'), 'utf-8');
@@ -55,27 +56,27 @@ assert(macbookContent.includes('shouldShowPreviewLogo'), 'shouldShowPreviewLogo 
 assert(macbookContent.includes('bmm-mobile-accessories-row'), 'Mobile accessories row (#19 & #20) implemented');
 assert(macbookContent.includes('is-final-mode'), 'Final look clean toggle mode implemented');
 
-// TEST 5: BidModal & DonationModal Features
+// TEST 5: BidModal & DonationModal Features (Secure Checkout Integration)
 const bidModalContent = readFileSync(resolve('src/components/BidModal.tsx'), 'utf-8');
 assert(bidModalContent.includes('Device Lifelong ♾️'), 'BidModal displays Device Lifelong duration');
-assert(bidModalContent.includes('https://twitter.com/intent/tweet'), 'BidModal has Share on X viral tweet button');
-assert(bidModalContent.includes('Open Stripe ↗'), 'BidModal has instant Stripe checkout button');
+assert(bidModalContent.includes('initiateCheckoutSession'), 'BidModal integrates with server-side initiateCheckoutSession');
+assert(bidModalContent.includes('validateLogoFile'), 'BidModal validates logo asset size and format');
 
 const donationModalContent = readFileSync(resolve('src/components/DonationModal.tsx'), 'utf-8');
-assert(donationModalContent.includes('https://twitter.com/intent/tweet'), 'DonationModal has Share on X viral tweet button');
-assert(donationModalContent.includes('Open Stripe ↗'), 'DonationModal has instant Stripe checkout button');
+assert(donationModalContent.includes('initiateCheckoutSession'), 'DonationModal integrates with server-side initiateCheckoutSession');
+assert(donationModalContent.includes('customAmount < 5'), 'DonationModal validates minimum contribution amount');
 
 // TEST 6: Realtime Activity Ticker (LiveActivityTicker.tsx)
 const tickerContent = readFileSync(resolve('src/components/LiveActivityTicker.tsx'), 'utf-8');
-assert(tickerContent.includes(".from('brand_spots')"), 'LiveActivityTicker queries Supabase brand_spots');
-assert(tickerContent.includes('ticker_realtime_claims'), 'LiveActivityTicker listens to Realtime WebSocket claims');
-assert(tickerContent.includes('spots'), 'LiveActivityTicker syncs with local spots prop');
+assert(tickerContent.includes('public_sponsors_wall'), 'LiveActivityTicker queries sanitized public_sponsors_wall');
+assert(tickerContent.includes('ticker_verified_claims'), 'LiveActivityTicker listens to verified WebSocket claims');
+assert(tickerContent.includes('spots'), 'LiveActivityTicker syncs with canonical spots prop');
 
-// TEST 7: App.tsx Supabase Integration & State Persistence
+// TEST 7: App.tsx Supabase Integration & Canonical State
 const appContent = readFileSync(resolve('src/App.tsx'), 'utf-8');
-assert(appContent.includes('bmm_spots_state'), 'App.tsx persists spots state to localStorage');
-assert(appContent.includes('bmm_raised_usd'), 'App.tsx persists raised USD to localStorage');
-assert(appContent.includes('bmm_realtime_app_sync'), 'App.tsx listens to Supabase Realtime multi-user WebSocket');
+assert(appContent.includes('fundmymac_live_state'), 'App.tsx listens to Supabase Realtime multi-user WebSocket');
+assert(appContent.includes('CheckoutVerificationModal'), 'App.tsx includes post-checkout payment verification modal');
+assert(appContent.includes('refreshCanonicalData'), 'App.tsx refreshes canonical data from server');
 
 // TEST 8: HTML SEO & Metadata (index.html)
 const htmlContent = readFileSync(resolve('index.html'), 'utf-8');
