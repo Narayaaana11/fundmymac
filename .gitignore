@@ -34,3 +34,6 @@ supabase/.temp/
 
 # Visual audit screenshots
 audit_screenshots/
+
+# Vercel deployment artifacts
+.vercel
