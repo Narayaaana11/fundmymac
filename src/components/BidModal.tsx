@@ -35,6 +35,7 @@ export const BidModal: React.FC<BidModalProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    if (!spot) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
@@ -44,7 +45,7 @@ export const BidModal: React.FC<BidModalProps> = ({
       window.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
     };
-  }, [onClose]);
+  }, [spot, onClose]);
 
   if (!spot) return null;
 

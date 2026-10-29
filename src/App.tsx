@@ -395,11 +395,13 @@ export const App: React.FC = () => {
       <BrandMyMacFooter />
 
       {/* Spot Inspection & Claim Modal */}
-      <BidModal
-        spot={selectedSpot}
-        currency={currency}
-        onClose={() => setSelectedSpot(null)}
-      />
+      {selectedSpot && (
+        <BidModal
+          spot={selectedSpot}
+          currency={currency}
+          onClose={() => setSelectedSpot(null)}
+        />
+      )}
 
       {/* Donation & Sponsor Tier Checkout Modal */}
       <DonationModal

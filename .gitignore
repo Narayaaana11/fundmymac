@@ -37,3 +37,6 @@ audit_screenshots/
 
 # Vercel deployment artifacts
 .vercel
+
+.vercel
+.env*
