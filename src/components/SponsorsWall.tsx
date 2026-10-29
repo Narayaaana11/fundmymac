@@ -1,0 +1,141 @@
+import React from 'react';
+import type { SponsorTier } from '../data/fundMyMacData';
+import { SPONSOR_TIERS } from '../data/fundMyMacData';
+import { SpotlightCard } from './SpotlightCard';
+
+interface SponsorsWallProps {
+  currency: 'EUR' | 'USD';
+  onSelectTier: (tier: SponsorTier) => void;
+  onOpenCustomDonation: () => void;
+}
+
+export const SponsorsWall: React.FC<SponsorsWallProps> = ({
+  currency,
+  onSelectTier,
+  onOpenCustomDonation
+}) => {
+  const foundingSlots = [
+    { id: 1, title: 'Marquee Title Partner', priceUsd: 500, priceEur: 460, spot: 'Above Apple Logo · Highest IRL Visibility' },
+    { id: 2, title: 'Lid Prime Partner', priceUsd: 250, priceEur: 230, spot: 'MacBook Pro Aluminum Lid · Demo Days' },
+    { id: 3, title: 'Accessory / Charger Partner', priceUsd: 150, priceEur: 138, spot: '140W GaN Apple Fast Charger Body' },
+    { id: 4, title: 'The Corner Sponsor', priceUsd: 75, priceEur: 69, spot: 'Sticky Top Left Widget Banner' }
+  ];
+
+  const formatPrice = (tier: SponsorTier) => {
+    return currency === 'EUR' ? `${tier.priceEur} €` : `$${tier.priceUsd}`;
+  };
+
+  return (
+    <section id="sponsors" className="bmm-section bmm-sponsors-section">
+      <div className="bmm-section-inner">
+        {/* Section Header */}
+        <div className="bmm-pill-badge-green">
+          <span>🏆 OFFICIAL SPONSORS WALL</span>
+        </div>
+
+        <h2 className="bmm-section-title">Founding Partners & Backers</h2>
+        <p className="bmm-section-subtitle">
+          Be among the first visionary tech companies and developers on our MacBook Pro. Your logo and company receive permanent placement on this wall and in the VESPER ecosystem.
+        </p>
+
+        {/* Founding Sponsor Slots */}
+        <div className="bmm-sponsors-logo-grid" style={{ marginBottom: '44px' }}>
+          {foundingSlots.map((slot) => (
+            <div
+              key={slot.id}
+              className="bmm-sponsor-card"
+              style={{ borderStyle: 'dashed', cursor: 'pointer', background: 'rgba(255, 255, 255, 0.7)' }}
+              onClick={onOpenCustomDonation}
+            >
+              <div className="sponsor-card-top">
+                <span className="sponsor-spot-tag">Slot #{slot.id}</span>
+                <span className="sponsor-surface-tag" style={{ background: 'rgba(52, 199, 89, 0.12)', color: '#27ae60' }}>
+                  AVAILABLE
+                </span>
+              </div>
+
+              <div className="sponsor-placeholder-logo" style={{ margin: '14px 0', border: '2px dashed #0071e3', background: 'transparent' }}>
+                +
+              </div>
+
+              <h4 className="sponsor-card-name">{slot.title}</h4>
+              <p className="sponsor-card-bid" style={{ fontSize: '11px', color: 'var(--ink-2)', marginBottom: '8px' }}>
+                {slot.spot}
+              </p>
+              <strong style={{ fontSize: '15px', color: 'var(--blue)' }}>
+                {currency === 'EUR' ? `${slot.priceEur} €` : `$${slot.priceUsd}`}
+              </strong>
+              <span className="sponsor-visit-link" style={{ marginTop: '8px' }}>
+                Claim This Slot ›
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* Sponsor Packages / Pricing Tiers */}
+        <div id="sponsor-tiers" className="bmm-tiers-wrapper">
+          <div className="bmm-tiers-header">
+            <h3 className="bmm-tiers-title">Sponsorship Tiers & Perks</h3>
+            <p className="bmm-tiers-desc">
+              Select a sponsorship tier to secure your spot or support our mission with a custom contribution.
+            </p>
+          </div>
+
+          <div className="bmm-tiers-grid">
+            {SPONSOR_TIERS.map((tier) => (
+              <SpotlightCard
+                key={tier.id}
+                className={`bmm-tier-card ${tier.recommended ? 'recommended-tier' : ''}`}
+                spotlightColor={tier.recommended ? 'rgba(0, 113, 227, 0.22)' : 'rgba(0, 0, 0, 0.05)'}
+              >
+                {tier.recommended && (
+                  <div className="tier-recommended-badge">MOST POPULAR IRL TIER</div>
+                )}
+
+                <div className="tier-head">
+                  <h4 className="tier-name">{tier.name}</h4>
+                  <div className="tier-price-row">
+                    <span className="tier-price">{formatPrice(tier)}</span>
+                    <span className="tier-period">/ one-time</span>
+                  </div>
+                </div>
+
+                <ul className="tier-perks-list">
+                  {tier.perks.map((perk, idx) => (
+                    <li key={idx} className="tier-perk-item">
+                      <span className="perk-check">✓</span>
+                      <span>{perk}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <button
+                  type="button"
+                  onClick={() => onSelectTier(tier)}
+                  className={`bmm-btn-tier ${tier.recommended ? 'bmm-btn-blue' : 'bmm-btn-outline'}`}
+                >
+                  Sponsor as {tier.name}
+                </button>
+              </SpotlightCard>
+            ))}
+          </div>
+
+          {/* Custom Donation Banner */}
+          <div className="bmm-custom-donate-banner">
+            <div>
+              <h4>Want to Support with a Custom Donation?</h4>
+              <p>Every dollar directly finances our Apple M5 Max / M5 Pro machine and VESPER startup compute with zero budget ceiling.</p>
+            </div>
+            <button
+              type="button"
+              onClick={onOpenCustomDonation}
+              className="bmm-btn-emerald"
+            >
+              💖 Make a Custom Donation
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
