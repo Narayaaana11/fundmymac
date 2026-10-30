@@ -88,15 +88,19 @@ export const App: React.FC = () => {
             if (name.includes('staging') || name.includes('test') || name.includes('verification')) {
               return s;
             }
+            const isSold = Boolean(dbSpot.is_sold || dbSpot.status === 'sold');
+            const hasActiveBids = typeof dbSpot.bid_count === 'number' && dbSpot.bid_count > 0;
+            const hasRealBid = isSold || hasActiveBids;
+
             return {
               ...s,
-              isSold: Boolean(dbSpot.is_sold || dbSpot.status === 'sold'),
+              isSold,
               sponsorName: dbSpot.sponsor_name || s.sponsorName,
               sponsorUrl: dbSpot.sponsor_url || s.sponsorUrl,
               logoUrl: dbSpot.logo_url || s.logoUrl,
-              topBidUsd: dbSpot.price_usd_cents ? Math.round(dbSpot.price_usd_cents / 100) : (dbSpot.top_bid_usd || s.topBidUsd),
-              topBidEur: dbSpot.price_eur_cents ? Math.round(dbSpot.price_eur_cents / 100) : (dbSpot.top_bid_eur || s.topBidEur),
-              topBidInr: dbSpot.price_inr_paise ? Math.round(dbSpot.price_inr_paise / 100) : (dbSpot.top_bid_inr || s.topBidInr),
+              topBidUsd: hasRealBid && dbSpot.price_usd_cents ? Math.max(s.topBidUsd, Math.round(dbSpot.price_usd_cents / 100)) : s.topBidUsd,
+              topBidEur: hasRealBid && dbSpot.price_eur_cents ? Math.max(s.topBidEur, Math.round(dbSpot.price_eur_cents / 100)) : s.topBidEur,
+              topBidInr: hasRealBid && dbSpot.price_inr_paise ? Math.max(s.topBidInr || 0, Math.round(dbSpot.price_inr_paise / 100)) : s.topBidInr,
               bidCount: dbSpot.bid_count || s.bidCount
             };
           })
@@ -149,17 +153,22 @@ export const App: React.FC = () => {
           setSpots((prev) =>
             prev.map((s) =>
               s.id === newRecord.id
-                ? {
-                    ...s,
-                    isSold: Boolean(newRecord.is_sold || newRecord.status === 'sold'),
-                    sponsorName: newRecord.sponsor_name || s.sponsorName,
-                    sponsorUrl: newRecord.sponsor_url || s.sponsorUrl,
-                    logoUrl: newRecord.logo_url || s.logoUrl,
-                    topBidUsd: newRecord.price_usd_cents ? Math.round(newRecord.price_usd_cents / 100) : s.topBidUsd,
-                    topBidEur: newRecord.price_eur_cents ? Math.round(newRecord.price_eur_cents / 100) : s.topBidEur,
-                    topBidInr: newRecord.price_inr_paise ? Math.round(newRecord.price_inr_paise / 100) : s.topBidInr,
-                    bidCount: typeof newRecord.bid_count === 'number' ? newRecord.bid_count : s.bidCount + 1
-                  }
+                ? (() => {
+                    const isSold = Boolean(newRecord.is_sold || newRecord.status === 'sold');
+                    const hasActiveBids = typeof newRecord.bid_count === 'number' && newRecord.bid_count > 0;
+                    const hasRealBid = isSold || hasActiveBids;
+                    return {
+                      ...s,
+                      isSold,
+                      sponsorName: newRecord.sponsor_name || s.sponsorName,
+                      sponsorUrl: newRecord.sponsor_url || s.sponsorUrl,
+                      logoUrl: newRecord.logo_url || s.logoUrl,
+                      topBidUsd: hasRealBid && newRecord.price_usd_cents ? Math.max(s.topBidUsd, Math.round(newRecord.price_usd_cents / 100)) : s.topBidUsd,
+                      topBidEur: hasRealBid && newRecord.price_eur_cents ? Math.max(s.topBidEur, Math.round(newRecord.price_eur_cents / 100)) : s.topBidEur,
+                      topBidInr: hasRealBid && newRecord.price_inr_paise ? Math.max(s.topBidInr || 0, Math.round(newRecord.price_inr_paise / 100)) : s.topBidInr,
+                      bidCount: typeof newRecord.bid_count === 'number' ? newRecord.bid_count : s.bidCount + 1
+                    };
+                  })()
                 : s
             )
           );

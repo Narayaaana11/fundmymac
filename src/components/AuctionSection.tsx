@@ -82,9 +82,9 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
             </>
           ) : (
             <>
-              Starting floors from <strong>{formatPrice(125, 135, 11300)} Small</strong> ·{' '}
-              <strong>{formatPrice(200, 215, 18000)} Medium</strong> ·{' '}
-              <strong>{formatPrice(400, 430, 36000)} Marquee</strong>. Minimum outbid increment:{' '}
+              Starting floors from <strong>{formatPrice(115, 125, 10500)} Small</strong> ·{' '}
+              <strong>{formatPrice(185, 200, 16800)} Medium</strong> ·{' '}
+              <strong>{formatPrice(460, 500, 42000)} Prime Marquee</strong>. Minimum outbid increment:{' '}
               <strong>+{formatPrice(10, 10, 800)}</strong>. Outbid deposits automatically refunded in full.
             </>
           )}

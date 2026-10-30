@@ -530,7 +530,7 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
             )}
           </div>
           <span className="bmm-mobile-acc-status">
-            {shouldShowPreviewLogo(chargerSpot.id) ? '✨ Previewing Your Logo' : chargerSpot.isSold ? `Sponsored by ${chargerSpot.sponsorName}` : 'Pricing Coming Soon'}
+            {shouldShowPreviewLogo(chargerSpot.id) ? '✨ Previewing Your Logo' : chargerSpot.isSold ? `Sponsored by ${chargerSpot.sponsorName}` : formatPrice(chargerSpot.topBidEur, chargerSpot.topBidUsd, chargerSpot.topBidInr)}
           </span>
         </div>
 
@@ -560,7 +560,7 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
             )}
           </div>
           <span className="bmm-mobile-acc-status">
-            {shouldShowPreviewLogo(mouseSpot.id) ? '✨ Previewing Your Logo' : mouseSpot.isSold ? `Sponsored by ${mouseSpot.sponsorName}` : 'Pricing Coming Soon'}
+            {shouldShowPreviewLogo(mouseSpot.id) ? '✨ Previewing Your Logo' : mouseSpot.isSold ? `Sponsored by ${mouseSpot.sponsorName}` : formatPrice(mouseSpot.topBidEur, mouseSpot.topBidUsd, mouseSpot.topBidInr)}
           </span>
         </div>
       </div>
@@ -585,7 +585,7 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
             Final look
           </button>
         </div>
-        <p className="bmm-tap-hint">Tap any space to inspect perks and join the waitlist.</p>
+        <p className="bmm-tap-hint">Tap any space to inspect placement perks and place your bid.</p>
       </div>
     </div>
   );
