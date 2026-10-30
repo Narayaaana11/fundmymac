@@ -324,7 +324,7 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
                           />
                         ) : (
                           <span className="bmm-spot-sponsor-title">
-                            {viewMode === 'final' ? '' : (spot.isSold ? spot.sponsorName : (spot.id === 2 ? 'Prime Marquee' : 'Opening Soon'))}
+                            {viewMode === 'final' ? '' : (spot.isSold ? spot.sponsorName : (spot.id === 2 ? 'Prime Marquee' : 'Open Spot'))}
                           </span>
                         )}
                       </div>

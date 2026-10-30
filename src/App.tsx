@@ -13,7 +13,6 @@ import { VesperMission } from './components/VesperMission';
 import { EventsRoadmap } from './components/EventsRoadmap';
 import { SponsorsWall } from './components/SponsorsWall';
 import { AuctionSection } from './components/AuctionSection';
-import { WaitlistSection } from './components/WaitlistSection';
 import { HowItWorks } from './components/HowItWorks';
 import { MachineSpecs } from './components/MachineSpecs';
 import { FAQSection } from './components/FAQSection';
@@ -411,7 +410,7 @@ export const App: React.FC = () => {
             >
               {IS_PUBLIC_PREVIEW
                 ? '🏷️ Inspect Sponsorship Spots'
-                : '🏷️ Bid on a Spot (From $135)'}
+                : '🏷️ Bid on a Spot (From $100)'}
             </button>
             <button
               type="button"
@@ -515,9 +514,6 @@ export const App: React.FC = () => {
           onOpenLeaderboard={() => setIsLeaderboardOpen(true)}
           isLiveSync={isLiveSync}
         />
-
-        {/* Priority Waitlist & Sponsorship Enquiry */}
-        <WaitlistSection />
 
         {/* 5. How It Works (3 Steps) */}
         <HowItWorks />

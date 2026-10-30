@@ -72,19 +72,56 @@ async function verify() {
   // Also verify clicking a spot opens BidModal in sale mode with 20% deposit and Razorpay key option
   const testPage = await browser.newPage({ viewport: { width: 1366, height: 768 } });
   await testPage.goto(TARGET_URL, { waitUntil: 'networkidle' });
-  
-  // Click spot #2 (Marquee)
+
+  // 1. Navbar checks: NO timer in navbar, NO waitlist in navbar
+  const hasNavTimer = await testPage.evaluate(() => {
+    const timer = document.querySelector('.bmm-nav .bmm-countdown-compact');
+    return timer !== null;
+  });
+  const hasNavWaitlist = await testPage.evaluate(() => {
+    return Array.from(document.querySelectorAll('.bmm-nav a')).some((a) =>
+      a.textContent?.toLowerCase().includes('waitlist')
+    );
+  });
+  const hasWaitlistSection = await testPage.evaluate(() => {
+    return document.querySelector('#waitlist') !== null;
+  });
+
+  console.log('\n--- Navbar & Page Cleanliness Checks ---');
+  console.log('Navbar Countdown Timer Removed:', !hasNavTimer ? 'PASS (Removed)' : 'FAIL');
+  console.log('Navbar Waitlist Link Removed:', !hasNavWaitlist ? 'PASS (Removed)' : 'FAIL');
+  console.log('Waitlist Section Removed:', !hasWaitlistSection ? 'PASS (Removed)' : 'FAIL');
+
+  // 2. Click spot #2 (Marquee)
   await testPage.click('[data-spot-id="2"]');
   await testPage.waitForTimeout(500);
 
   const modalTitle = await testPage.textContent('#bid-modal-title');
   const modalText = await testPage.evaluate(() => document.querySelector('.bmm-modal-card')?.innerText || '');
 
+  // Check modal bounds
+  const modalRect = await testPage.evaluate(() => {
+    const card = document.querySelector('.bmm-modal-card');
+    const closeBtn = document.querySelector('.bmm-modal-close');
+    const cardBox = card?.getBoundingClientRect();
+    const closeBox = closeBtn?.getBoundingClientRect();
+    return {
+      cardTop: cardBox?.top,
+      cardBottom: cardBox?.bottom,
+      cardHeight: cardBox?.height,
+      windowHeight: window.innerHeight,
+      closeVisible: closeBox && closeBox.top >= 0 && closeBox.bottom <= window.innerHeight
+    };
+  });
+
   console.log('\n--- BidModal Live Verification ---');
   console.log('Modal opened for:', modalTitle);
-  console.log('Includes "$430":', modalText.includes('430'));
-  console.log('Includes "Place Bid Deposit ($86)":', modalText.includes('86'));
-  console.log('Includes Razorpay Key ID option:', modalText.includes('Razorpay Key ID'));
+  console.log('Includes "$500":', modalText.includes('500'));
+  console.log('Includes "Place Bid Deposit ($100)":', modalText.includes('100'));
+  console.log('Includes "Open for Bidding":', modalText.includes('Open for Bidding'));
+  console.log('Modal Card Top >= 0:', modalRect.cardTop >= 0 ? `PASS (${modalRect.cardTop}px)` : `FAIL (${modalRect.cardTop}px)`);
+  console.log('Modal Card Bottom <= Viewport:', modalRect.cardBottom <= modalRect.windowHeight ? `PASS (${modalRect.cardBottom}px <= ${modalRect.windowHeight}px)` : `FAIL`);
+  console.log('Close Button Fully Visible:', modalRect.closeVisible ? 'PASS' : 'FAIL');
 
   await testPage.screenshot({ path: 'audit_screenshots/sale_ready_bid_modal.png' });
 

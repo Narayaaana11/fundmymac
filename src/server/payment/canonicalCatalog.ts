@@ -10,27 +10,27 @@
 import type { CanonicalSpot, CanonicalTier, CurrencyCode } from './types.ts';
 
 export const CANONICAL_SPOTS: Record<number, CanonicalSpot> = {
-  // Large spots: $430 USD / 400 € / ₹36,000 INR
-  1: { id: 1, name: 'Top-Left Banner', surface: 'lid', priceInrPaise: 3600000, priceUsdCents: 43000, priceEurCents: 40000 },
-  2: { id: 2, name: 'Marquee — Above Apple Logo', surface: 'lid', priceInrPaise: 3600000, priceUsdCents: 43000, priceEurCents: 40000 },
-  3: { id: 3, name: 'Top-Right Banner', surface: 'lid', priceInrPaise: 3600000, priceUsdCents: 43000, priceEurCents: 40000 },
-  4: { id: 4, name: 'Upper Left Mini-Strip', surface: 'lid', priceInrPaise: 1130000, priceUsdCents: 13500, priceEurCents: 12500 },
-  5: { id: 5, name: 'Inner Left — Beside Logo', surface: 'lid', priceInrPaise: 1800000, priceUsdCents: 21500, priceEurCents: 20000 },
-  6: { id: 6, name: 'Inner Right — Beside Logo', surface: 'lid', priceInrPaise: 1800000, priceUsdCents: 21500, priceEurCents: 20000 },
-  7: { id: 7, name: 'Upper Right Mini-Strip', surface: 'lid', priceInrPaise: 1130000, priceUsdCents: 13500, priceEurCents: 12500 },
-  8: { id: 8, name: 'Bottom Left Strip', surface: 'lid', priceInrPaise: 1800000, priceUsdCents: 21500, priceEurCents: 20000 },
-  9: { id: 9, name: 'Bottom Center — Under Logo', surface: 'lid', priceInrPaise: 3600000, priceUsdCents: 43000, priceEurCents: 40000 },
-  10: { id: 10, name: 'Bottom Right Strip', surface: 'lid', priceInrPaise: 1800000, priceUsdCents: 21500, priceEurCents: 20000 },
-  11: { id: 11, name: 'Left Palm Outer Top', surface: 'inside', priceInrPaise: 1130000, priceUsdCents: 13500, priceEurCents: 12500 },
-  12: { id: 12, name: 'Left Palm Outer Bottom', surface: 'inside', priceInrPaise: 1130000, priceUsdCents: 13500, priceEurCents: 12500 },
-  13: { id: 13, name: 'Left Palm Inner Top', surface: 'inside', priceInrPaise: 1130000, priceUsdCents: 13500, priceEurCents: 12500 },
-  14: { id: 14, name: 'Left Palm Inner Bottom', surface: 'inside', priceInrPaise: 1130000, priceUsdCents: 13500, priceEurCents: 12500 },
-  15: { id: 15, name: 'Right Palm Inner Top', surface: 'inside', priceInrPaise: 1130000, priceUsdCents: 13500, priceEurCents: 12500 },
-  16: { id: 16, name: 'Right Palm Inner Bottom', surface: 'inside', priceInrPaise: 1130000, priceUsdCents: 13500, priceEurCents: 12500 },
-  17: { id: 17, name: 'Right Palm Outer Top', surface: 'inside', priceInrPaise: 1130000, priceUsdCents: 13500, priceEurCents: 12500 },
-  18: { id: 18, name: 'Right Palm Outer Bottom', surface: 'inside', priceInrPaise: 1130000, priceUsdCents: 13500, priceEurCents: 12500 },
-  19: { id: 19, name: '140W Fast Charger Body', surface: 'accessory', priceInrPaise: 3600000, priceUsdCents: 43000, priceEurCents: 40000 },
-  20: { id: 20, name: 'Magic Mouse Curved Top', surface: 'accessory', priceInrPaise: 1800000, priceUsdCents: 21500, priceEurCents: 20000 }
+  // Prime spots: $350-$500 USD / €320-€460 / ₹29,400-₹42,000
+  1: { id: 1, name: 'Top-Left Banner', surface: 'lid', priceInrPaise: 2940000, priceUsdCents: 35000, priceEurCents: 32000 },
+  2: { id: 2, name: 'Marquee — Above Apple Logo', surface: 'lid', priceInrPaise: 4200000, priceUsdCents: 50000, priceEurCents: 46000 },
+  3: { id: 3, name: 'Top-Right Banner', surface: 'lid', priceInrPaise: 2940000, priceUsdCents: 35000, priceEurCents: 32000 },
+  4: { id: 4, name: 'Upper Left Mini-Strip', surface: 'lid', priceInrPaise: 1050000, priceUsdCents: 12500, priceEurCents: 11500 },
+  5: { id: 5, name: 'Inner Left — Beside Logo', surface: 'lid', priceInrPaise: 1680000, priceUsdCents: 20000, priceEurCents: 18500 },
+  6: { id: 6, name: 'Inner Right — Beside Logo', surface: 'lid', priceInrPaise: 1680000, priceUsdCents: 20000, priceEurCents: 18500 },
+  7: { id: 7, name: 'Upper Right Mini-Strip', surface: 'lid', priceInrPaise: 1050000, priceUsdCents: 12500, priceEurCents: 11500 },
+  8: { id: 8, name: 'Bottom Left Strip', surface: 'lid', priceInrPaise: 1680000, priceUsdCents: 20000, priceEurCents: 18500 },
+  9: { id: 9, name: 'Bottom Center — Under Logo', surface: 'lid', priceInrPaise: 2520000, priceUsdCents: 30000, priceEurCents: 27600 },
+  10: { id: 10, name: 'Bottom Right Strip', surface: 'lid', priceInrPaise: 1680000, priceUsdCents: 20000, priceEurCents: 18500 },
+  11: { id: 11, name: 'Left Palm Outer Top', surface: 'inside', priceInrPaise: 1260000, priceUsdCents: 15000, priceEurCents: 13800 },
+  12: { id: 12, name: 'Left Palm Outer Bottom', surface: 'inside', priceInrPaise: 1260000, priceUsdCents: 15000, priceEurCents: 13800 },
+  13: { id: 13, name: 'Left Palm Inner Top', surface: 'inside', priceInrPaise: 1260000, priceUsdCents: 15000, priceEurCents: 13800 },
+  14: { id: 14, name: 'Left Palm Inner Bottom', surface: 'inside', priceInrPaise: 1260000, priceUsdCents: 15000, priceEurCents: 13800 },
+  15: { id: 15, name: 'Right Palm Inner Top', surface: 'inside', priceInrPaise: 1260000, priceUsdCents: 15000, priceEurCents: 13800 },
+  16: { id: 16, name: 'Right Palm Inner Bottom', surface: 'inside', priceInrPaise: 1260000, priceUsdCents: 15000, priceEurCents: 13800 },
+  17: { id: 17, name: 'Right Palm Outer Top', surface: 'inside', priceInrPaise: 1260000, priceUsdCents: 15000, priceEurCents: 13800 },
+  18: { id: 18, name: 'Right Palm Outer Bottom', surface: 'inside', priceInrPaise: 1260000, priceUsdCents: 15000, priceEurCents: 13800 },
+  19: { id: 19, name: '140W Fast Charger Body', surface: 'accessory', priceInrPaise: 1260000, priceUsdCents: 15000, priceEurCents: 13800 },
+  20: { id: 20, name: 'Magic Mouse Curved Top', surface: 'accessory', priceInrPaise: 840000, priceUsdCents: 10000, priceEurCents: 9200 }
 };
 
 export const CANONICAL_TIERS: Record<string, CanonicalTier> = {

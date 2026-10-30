@@ -236,7 +236,7 @@ export const BidModal: React.FC<BidModalProps> = ({
       aria-modal="true"
       aria-labelledby="bid-modal-title"
     >
-      <div className="bmm-modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '540px' }}>
+      <div className="bmm-modal-card" onClick={(e) => e.stopPropagation()}>
         <button
           type="button"
           onClick={onClose}
@@ -273,7 +273,7 @@ export const BidModal: React.FC<BidModalProps> = ({
           <div>
             <span className="bmm-modal-stat-label">Availability</span>
             <span className="bmm-modal-stat-val tabular-nums" style={{ color: '#34c759' }}>
-              {spot.isSold ? 'Reserved' : 'Open for Preview'}
+              {spot.isSold ? 'Reserved' : 'Open for Bidding'}
             </span>
           </div>
           <div>
@@ -313,12 +313,20 @@ export const BidModal: React.FC<BidModalProps> = ({
           <div style={{ textAlign: 'center', padding: '24px 16px' }}>
             <div style={{ fontSize: '48px', marginBottom: '12px' }}>🎉</div>
             <h4 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--ink)', marginBottom: '8px' }}>
-              You're on the Priority Waitlist!
+              {IS_PUBLIC_PREVIEW ? "You're on the Priority Waitlist!" : "Bid Placed Successfully! 🚀"}
             </h4>
             <p style={{ fontSize: '14px', color: 'var(--ink-2)', lineHeight: 1.6, maxWidth: '440px', margin: '0 auto 16px' }}>
-              Thank you for registering interest for <strong>Spot #{spot.id} ({spot.name})</strong>.
-              Fund My Mac is in public preview while Razorpay merchant approval completes.
-              We will notify <strong>{email}</strong> the moment bidding officially opens.
+              {IS_PUBLIC_PREVIEW ? (
+                <>
+                  Thank you for registering interest for <strong>Spot #{spot.id} ({spot.name})</strong>.
+                  We will notify <strong>{email}</strong> the moment bidding officially opens.
+                </>
+              ) : (
+                <>
+                  Thank you, <strong>{brandName}</strong>! Your bid deposit for <strong>Spot #{spot.id} ({spot.name})</strong> has been recorded.
+                  Confirmation and receipt details have been sent to <strong>{email}</strong>.
+                </>
+              )}
             </p>
 
             <button

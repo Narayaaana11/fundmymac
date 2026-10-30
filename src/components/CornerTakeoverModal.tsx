@@ -198,7 +198,7 @@ export const CornerTakeoverModal: React.FC<CornerTakeoverModalProps> = ({
       aria-modal="true"
       aria-labelledby="corner-modal-title"
     >
-      <div className="bmm-modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+      <div className="bmm-modal-card" onClick={(e) => e.stopPropagation()}>
         <button
           type="button"
           onClick={onClose}
@@ -235,11 +235,12 @@ export const CornerTakeoverModal: React.FC<CornerTakeoverModalProps> = ({
           >
             <div style={{ fontSize: '32px', marginBottom: '8px' }}>🎉</div>
             <h4 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--ink)', marginBottom: '8px' }}>
-              You're on the Corner Priority Waitlist!
+              {IS_PUBLIC_PREVIEW ? "You're on the Corner Priority Waitlist!" : "The Corner Claimed Successfully! ⚡"}
             </h4>
             <p style={{ fontSize: '13px', color: 'var(--ink-2)', lineHeight: 1.5, marginBottom: '16px' }}>
-              Fund My Mac is in public preview while Razorpay merchant approval is finalized.
-              We'll notify <strong>{email}</strong> the moment The Corner officially launches.
+              {IS_PUBLIC_PREVIEW
+                ? `We'll notify ${email} the moment The Corner officially launches.`
+                : `Congratulations, ${brandName}! Your takeover has been applied and your brand is now featured in the sticky corner.`}
             </p>
             <button
               type="button"

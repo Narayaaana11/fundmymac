@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { AuctionCountdown } from './AuctionCountdown';
 import { IS_PUBLIC_PREVIEW } from '../config/previewConfig';
 
 export type DisplayCurrency = 'INR' | 'USD' | 'EUR';
@@ -24,7 +23,6 @@ export const BrandMyMacNavbar: React.FC<BrandMyMacNavbarProps> = ({
     { label: 'The Machine', href: '#macbook-showcase' },
     { label: 'The Corner', href: '#corner' },
     { label: 'The Mission', href: '#vesper-mission' },
-    { label: 'Waitlist', href: '#waitlist' },
     { label: 'FAQ', href: '#faq' }
   ];
 
@@ -51,11 +49,6 @@ export const BrandMyMacNavbar: React.FC<BrandMyMacNavbarProps> = ({
               <span className="bmm-nav-vesper-tag">by VESPER</span>
             </span>
           </a>
-
-          {/* Desktop Countdown Pill */}
-          <div className="bmm-nav-countdown-wrap">
-            <AuctionCountdown compact />
-          </div>
 
           {/* Desktop Center links */}
           <div className="bmm-nav-links">
@@ -139,7 +132,7 @@ export const BrandMyMacNavbar: React.FC<BrandMyMacNavbarProps> = ({
             className="bmm-btn-blue"
             style={{ width: '100%', padding: '10px 0', marginTop: '6px' }}
           >
-            💖 Join the Waitlist
+            {IS_PUBLIC_PREVIEW ? '💖 Join Priority Waitlist' : 'Bid on a Spot 🚀'}
           </button>
         </div>
       )}
