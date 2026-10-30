@@ -12,8 +12,8 @@ interface BrandMyMacNavbarProps {
 }
 
 export const BrandMyMacNavbar: React.FC<BrandMyMacNavbarProps> = ({
-  currency,
-  onToggleCurrency,
+  currency: _currency,
+  onToggleCurrency: _onToggleCurrency,
   onGetSpotClick,
   onOpenLeaderboard
 }) => {
@@ -84,35 +84,8 @@ export const BrandMyMacNavbar: React.FC<BrandMyMacNavbarProps> = ({
             )}
           </div>
 
-          {/* Right side currency & CTA */}
+          {/* Right side CTA */}
           <div className="bmm-nav-right">
-            <div role="group" aria-label="Display currency" className="bmm-currency-switch">
-              <button
-                type="button"
-                onClick={() => onToggleCurrency('INR')}
-                aria-pressed={currency === 'INR'}
-                className={`bmm-curr-btn ${currency === 'INR' ? 'active' : ''}`}
-              >
-                ₹
-              </button>
-              <button
-                type="button"
-                onClick={() => onToggleCurrency('USD')}
-                aria-pressed={currency === 'USD'}
-                className={`bmm-curr-btn ${currency === 'USD' ? 'active' : ''}`}
-              >
-                $
-              </button>
-              <button
-                type="button"
-                onClick={() => onToggleCurrency('EUR')}
-                aria-pressed={currency === 'EUR'}
-                className={`bmm-curr-btn ${currency === 'EUR' ? 'active' : ''}`}
-              >
-                €
-              </button>
-            </div>
-
             <button
               type="button"
               onClick={onGetSpotClick}

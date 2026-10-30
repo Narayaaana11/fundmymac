@@ -14,7 +14,7 @@ interface AuctionSectionProps {
 }
 
 export const AuctionSection: React.FC<AuctionSectionProps> = ({
-  currency,
+  currency: _currency,
   onSpotClick,
   onOpenLeaderboard,
   spots,
@@ -32,13 +32,8 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
 
   const totalBidsCount = activeSpots.reduce((acc, s) => acc + s.bidCount, 0);
 
-  const formatPrice = (eur: number, usd: number, inr?: number) => {
+  const formatPrice = (_eur: number, usd: number, _inr?: number) => {
     if (IS_PUBLIC_PREVIEW) return 'Pricing Coming Soon';
-    if (currency === 'INR') {
-      const val = inr || Math.round(usd * 84);
-      return `₹${val.toLocaleString('en-IN')}`;
-    }
-    if (currency === 'EUR') return `${eur.toLocaleString()} €`;
     return `$${usd.toLocaleString()}`;
   };
 

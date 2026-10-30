@@ -12,7 +12,7 @@ interface LeaderboardModalProps {
 
 export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
   isOpen,
-  currency,
+  currency: _currency,
   spots,
   onClose,
   onSelectSpot
@@ -32,21 +32,10 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Rank spots by top bid descending
-  const sortedSpots = [...spots].sort((a, b) => {
-    const valA = currency === 'INR' ? (a.topBidInr || a.topBidUsd * 84) : currency === 'EUR' ? a.topBidEur : a.topBidUsd;
-    const valB = currency === 'INR' ? (b.topBidInr || b.topBidUsd * 84) : currency === 'EUR' ? b.topBidEur : b.topBidUsd;
-    return valB - valA;
-  });
+  // Rank spots by top bid descending in USD
+  const sortedSpots = [...spots].sort((a, b) => b.topBidUsd - a.topBidUsd);
 
   const formatPrice = (spot: BrandSpot) => {
-    if (currency === 'INR') {
-      const inr = spot.topBidInr || Math.round(spot.topBidUsd * 84);
-      return `₹${inr.toLocaleString('en-IN')}`;
-    }
-    if (currency === 'EUR') {
-      return `${spot.topBidEur.toLocaleString()} €`;
-    }
     return `$${spot.topBidUsd.toLocaleString()}`;
   };
 

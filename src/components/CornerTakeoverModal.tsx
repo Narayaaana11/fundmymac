@@ -23,7 +23,7 @@ interface CornerTakeoverModalProps {
 
 export const CornerTakeoverModal: React.FC<CornerTakeoverModalProps> = ({
   isOpen,
-  currency,
+  currency: _currency,
   cornerData,
   onClose,
   onTakeoverSuccess
@@ -59,19 +59,8 @@ export const CornerTakeoverModal: React.FC<CornerTakeoverModalProps> = ({
 
   if (!isOpen) return null;
 
-  const nextPriceFormatted =
-    currency === 'INR'
-      ? `₹${cornerData.nextBidInr.toLocaleString('en-IN')}`
-      : currency === 'EUR'
-      ? `${cornerData.nextBidEur} €`
-      : `$${cornerData.nextBidUsd}`;
-
-  const nextPriceAmount =
-    currency === 'INR'
-      ? cornerData.nextBidInr
-      : currency === 'EUR'
-      ? cornerData.nextBidEur
-      : cornerData.nextBidUsd;
+  const nextPriceFormatted = `$${cornerData.nextBidUsd || 45}`;
+  const nextPriceAmount = cornerData.nextBidUsd || 45;
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLogoError(null);
@@ -152,7 +141,7 @@ export const CornerTakeoverModal: React.FC<CornerTakeoverModalProps> = ({
         const rzp = new window.Razorpay({
           key: testKey,
           amount: nextPriceAmount * 100,
-          currency: currency.toUpperCase(),
+          currency: 'USD',
           name: 'Fund My Mac · The Corner',
           description: `Claim Corner Space for ${nextPriceFormatted}`,
           image: logoPreview || '/logo-small.png',

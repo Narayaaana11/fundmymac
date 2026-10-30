@@ -64,7 +64,7 @@ export const MachineSpecs: React.FC = () => {
             </h3>
           </div>
           <p style={{ fontSize: '14px', lineHeight: '1.6', color: 'var(--ink-2)', margin: '0 0 16px' }}>
-            There is <strong>no ceiling on our fundraising goal</strong>. The $3,999 target represents Phase 1: securing the flagship Apple M5 Max / M5 Pro machine so our founder can resume core engineering. Every extra dollar raised beyond hardware costs is channeled directly into scaling the <strong>VESPER</strong> AI startup:
+            There is <strong>no ceiling on our fundraising goal</strong>. The $4,000 target represents Phase 1: securing the flagship Apple M5 Max / M5 Pro machine so our founder can resume core engineering. Every extra dollar raised beyond hardware costs is channeled directly into scaling the <strong>VESPER</strong> AI startup:
           </p>
 
           {/* Milestones Roadmap */}

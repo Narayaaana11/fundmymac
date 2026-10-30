@@ -17,7 +17,7 @@ export const VesperMission: React.FC = () => {
         </h2>
 
         <p className="bmm-vesper-sub">
-          We’re building <strong>VESPER</strong> — an autonomous cognitive AI workspace that enables engineers to design, build, and deploy production software with superhuman velocity.
+          We’re building <strong>VESPER</strong> — a focused developer workspace designed to streamline complex engineering workflows and run local models efficiently without thermal throttling.
         </p>
 
         {/* Story Grid */}
@@ -47,9 +47,9 @@ export const VesperMission: React.FC = () => {
             <div className="story-icon-box bg-blue">💻</div>
             <h3 className="story-card-title">MacBook Pro 16″ (M5 Max / M5 Pro)</h3>
             <p className="story-card-desc">
-              Configured with 128GB unified memory and 2TB SSD to train and evaluate VESPER autonomous agent weights. <strong>No budget limit:</strong> all extra funds beyond hardware costs directly fuel cloud GPU compute, model training, and global roadshow demos.
+              Configured with 128GB unified memory and 2TB SSD to train and evaluate VESPER local workflows. <strong>No budget limit:</strong> all extra funds beyond hardware costs directly fuel cloud GPU compute, model training, and global roadshow demos.
             </p>
-            <div className="story-status-tag blue">Phase 1 Goal: $3,999 · No Limit for Startup Compute</div>
+            <div className="story-status-tag blue">Milestone 1 Goal: $4,000 · No Limit for Startup Runway</div>
           </SpotlightCard>
         </div>
 

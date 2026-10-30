@@ -102,11 +102,11 @@ export function useRealtimeMetrics(spots?: BrandSpot[], customWsUrl?: string) {
             }
           } else {
             // Fetch current stats
-            const { data } = await client.from('site_stats').select('views, spots_sold').maybeSingle();
+            const { data } = await client.from('site_stats').select('views').maybeSingle();
             if (isMounted && data) {
               updateMetrics({
                 visitors: typeof data.views === 'number' ? data.views : 0,
-                spotsSold: typeof data.spots_sold === 'number' ? data.spots_sold : getRealSpotsSold(spots)
+                spotsSold: getRealSpotsSold(spots)
               });
             }
           }
@@ -125,12 +125,9 @@ export function useRealtimeMetrics(spots?: BrandSpot[], customWsUrl?: string) {
           { event: '*', schema: 'public', table: 'site_stats' },
           (payload) => {
             if (!isMounted) return;
-            const newRecord = payload.new as { views?: number; spots_sold?: number };
-            if (newRecord) {
-              const updates: Partial<RealtimeMetricsData> = {};
-              if (typeof newRecord.views === 'number') updates.visitors = newRecord.views;
-              if (typeof newRecord.spots_sold === 'number') updates.spotsSold = newRecord.spots_sold;
-              updateMetrics(updates, 'visitors');
+            const newRecord = payload.new as { views?: number };
+            if (newRecord && typeof newRecord.views === 'number') {
+              updateMetrics({ visitors: newRecord.views }, 'visitors');
             }
           }
         )

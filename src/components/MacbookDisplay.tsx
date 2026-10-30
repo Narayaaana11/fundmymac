@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
 import type { BrandSpot } from '../data/fundMyMacData';
 import { BRAND_SPOTS } from '../data/fundMyMacData';
-import { IS_PUBLIC_PREVIEW } from '../config/previewConfig';
 import type { DisplayCurrency } from './BrandMyMacNavbar';
 
 interface MacbookDisplayProps {
@@ -34,7 +33,7 @@ const getInsideSpotPosition = (id: number) => {
 };
 
 export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
-  currency,
+  currency: _currency,
   onSpotClick,
   spots
 }) => {
@@ -71,13 +70,7 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
     return previewTargetSpotId === spotId;
   };
 
-  const formatPrice = (eur: number, usd: number, inr?: number) => {
-    if (IS_PUBLIC_PREVIEW) return 'Pricing Coming Soon';
-    if (currency === 'INR') {
-      const val = inr || Math.round(usd * 84);
-      return `₹${val.toLocaleString('en-IN')}`;
-    }
-    if (currency === 'EUR') return `${eur.toLocaleString()} €`;
+  const formatPrice = (_eur?: number, usd: number = 0, _inr?: number) => {
     return `$${usd.toLocaleString()}`;
   };
 

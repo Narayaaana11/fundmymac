@@ -1325,14 +1325,122 @@
   display: none;
 }
 
+/* --- DEDICATED ON-PAGE CORNER SECTION --- */
+.bmm-corner-section {
+  background: linear-gradient(180deg, #fbfbfd 0%, #f5f5f7 100%);
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  padding: 64px 20px;
+}
+
+.bmm-corner-feature-box {
+  max-width: 680px;
+  margin: 32px auto 0;
+  background: #ffffff;
+  border: 1px solid rgba(0, 113, 227, 0.25);
+  border-radius: 20px;
+  padding: 32px 28px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.bmm-corner-feature-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(52, 199, 89, 0.12);
+  color: #27ae60;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.bmm-corner-feature-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0 0 10px;
+}
+
+.bmm-corner-feature-price {
+  color: var(--blue);
+}
+
+.bmm-corner-feature-text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  max-width: 520px;
+  margin: 0 0 20px;
+}
+
+.bmm-corner-feature-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+/* Mobile Corner Bar (Hidden on desktop & laptops, clean bar on small mobile) */
+.bmm-corner-mobile {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .bmm-corner-mobile {
+    display: block;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 40;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 8px 16px;
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.05);
+  }
+  .bmm-corner-mobile-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+  .bmm-corner-mobile-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+  .bmm-corner-mobile-text {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+  }
+  .bmm-corner-mobile-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--ink-2);
+    letter-spacing: 0.04em;
+  }
+  .bmm-corner-mobile-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+}
+
 /* Responsive */
-@media (max-width: 1280px) {
+@media (max-width: 1540px) {
   .bmm-corner-desktop {
     display: none;
   }
-  .bmm-corner-mobile-bar {
-    display: flex;
-  }
+}
+
+@media (max-width: 1280px) {
   .bmm-charger-side,
   .bmm-mouse-side {
     display: none;
@@ -1345,12 +1453,6 @@
     margin: 28px auto 0;
     padding: 0 16px;
     max-width: 480px;
-  }
-  .bmm-activity-ticker-card {
-    bottom: 68px;
-    right: 12px;
-    left: 12px;
-    justify-content: space-between;
   }
 }
 

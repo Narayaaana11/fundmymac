@@ -58,24 +58,24 @@ export interface FundingMilestone {
 }
 
 export const FUNDING_GOAL = {
-  targetUsd: 3999,
+  targetUsd: 4000,
   raisedUsd: 0,
-  targetEur: 3650,
+  targetEur: 3680,
   raisedEur: 0,
-  targetInr: 335000,
+  targetInr: 336000,
   raisedInr: 0,
   hasNoLimit: true,
   deviceTarget: 'MacBook Pro 16″ (Apple M5 Max / M5 Pro · 128GB Unified Memory · 2TB SSD)',
-  devicePurpose: 'Zero-latency local LLM fine-tuning, autonomous VESPER multi-agent workflows, Docker clusters, and IRL founder roadshows without thermal throttling.',
+  devicePurpose: 'Zero-latency local LLM evaluation, autonomous VESPER engineering workflows, Docker clusters, and IRL founder roadshows without thermal throttling.',
   previousDevice: 'ASUS TUF Gaming F15 (Rendered completely unusable due to motherboard short-circuit during 48-hour model training sprint)',
-  budgetNote: 'No Budget Ceiling: Hardware target ($3,999) is our Phase 1 milestone. 100% of surplus funding is directly invested into the VESPER AI startup — covering cloud GPU compute clusters (H100/A100), LLM fine-tuning, and international demo day roadshows.'
+  budgetNote: 'No Budget Ceiling: Hardware target ($4,000) is our Phase 1 milestone. 100% of surplus funding is directly invested into the VESPER AI startup — covering cloud GPU compute clusters (H100/A100), LLM fine-tuning, and international demo day roadshows.'
 };
 
 export const FUNDING_MILESTONES: FundingMilestone[] = [
   {
     id: 'm1',
-    amountUsd: 3999,
-    amountEur: 3650,
+    amountUsd: 4000,
+    amountEur: 3680,
     title: 'Milestone 1 · Flagship Apple M5 Max / M5 Pro Hardware',
     badge: 'Hardware Goal',
     description: '16″ Liquid Retina XDR display, M5 Max / M5 Pro chip, 128GB unified memory, and 2TB SSD. Replaces our fried Asus TUF to unlock continuous agent development.',
@@ -574,36 +574,17 @@ export interface CornerState {
 }
 
 export const CORNER_DATA: CornerState = {
-  currentSponsor: 'VESPER AI',
-  currentUrl: 'https://vesper.ai',
-  amountEur: 30,
-  amountUsd: 35,
-  amountInr: 2800,
+  currentSponsor: 'Available',
+  currentUrl: '',
+  amountEur: 0,
+  amountUsd: 0,
+  amountInr: 0,
   nextBidEur: 40,
   nextBidUsd: 45,
   nextBidInr: 3600,
   avatarUrl: '/logo-small.png',
-  heldDuration: '3d',
-  history: [
-    {
-      name: 'masterhooks.com',
-      amountUsd: 25,
-      amountEur: 20,
-      amountInr: 2100,
-      held: '2d · $25',
-      url: 'https://masterhooks.com',
-      avatarUrl: '/logo-small.png'
-    },
-    {
-      name: 'kunopilot.com',
-      amountUsd: 15,
-      amountEur: 12,
-      amountInr: 1250,
-      held: '18h · $15',
-      url: 'https://kunopilot.com',
-      avatarUrl: '/logo-small.png'
-    }
-  ]
+  heldDuration: 'Now',
+  history: []
 };
 
 export const FAQ_DATA = [

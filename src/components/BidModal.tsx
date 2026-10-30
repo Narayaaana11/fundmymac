@@ -26,7 +26,7 @@ interface BidModalProps {
 
 export const BidModal: React.FC<BidModalProps> = ({
   spot,
-  currency,
+  currency: _currency,
   onClose,
   onBidPlaced
 }) => {
@@ -40,37 +40,23 @@ export const BidModal: React.FC<BidModalProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Currency specific floor & increments
-  const currentTopBid = !spot
-    ? 0
-    : currency === 'INR'
-    ? spot.topBidInr || Math.round(spot.topBidUsd * 84)
-    : currency === 'EUR'
-    ? spot.topBidEur
-    : spot.topBidUsd;
-
-  const minIncrement = currency === 'INR' ? 800 : 10;
+  // USD-only floor & increments
+  const currentTopBid = !spot ? 0 : spot.topBidUsd;
+  const minIncrement = 10;
   const minRequiredBid = spot && spot.bidCount > 0 ? currentTopBid + minIncrement : currentTopBid;
 
   const [bidAmount, setBidAmount] = useState<number>(minRequiredBid);
 
-  // Sync bid amount when spot or currency changes without unneeded renders
+  // Sync bid amount when spot changes
   const prevSpotIdRef = useRef<number | null>(null);
-  const prevCurrencyRef = useRef<string>(currency);
 
   useEffect(() => {
-    if (spot && (prevSpotIdRef.current !== spot.id || prevCurrencyRef.current !== currency)) {
+    if (spot && prevSpotIdRef.current !== spot.id) {
       prevSpotIdRef.current = spot.id;
-      prevCurrencyRef.current = currency;
-      const top =
-        currency === 'INR'
-          ? spot.topBidInr || Math.round(spot.topBidUsd * 84)
-          : currency === 'EUR'
-          ? spot.topBidEur
-          : spot.topBidUsd;
+      const top = spot.topBidUsd;
       setBidAmount(spot.bidCount > 0 ? top + minIncrement : top);
     }
-  }, [spot, currency, minIncrement]);
+  }, [spot, minIncrement]);
 
   const handleClose = useCallback(() => {
     setIsSuccess(false);
@@ -93,14 +79,12 @@ export const BidModal: React.FC<BidModalProps> = ({
 
   if (!spot) return null;
 
-  // 20% deposit calculation (minimum $10 / 10 € / ₹800)
+  // 20% deposit calculation (minimum $10)
   const depositPercent = 0.2;
-  const minDeposit = currency === 'INR' ? 800 : 10;
+  const minDeposit = 10;
   const calculatedDeposit = Math.max(Math.round(bidAmount * depositPercent), minDeposit);
 
   const formatCurrency = (val: number) => {
-    if (currency === 'INR') return `₹${val.toLocaleString('en-IN')}`;
-    if (currency === 'EUR') return `${val.toLocaleString()} €`;
     return `$${val.toLocaleString()}`;
   };
 
@@ -191,7 +175,7 @@ export const BidModal: React.FC<BidModalProps> = ({
         const rzp = new window.Razorpay({
           key: testKey,
           amount: depositMinorUnits,
-          currency: currency.toUpperCase(),
+          currency: 'USD',
           name: 'Fund My Mac · Auction Bid Deposit',
           description: `20% Deposit for Spot #${spot.id} (${spot.name})`,
           image: logoPreview || '/logo-small.png',
@@ -205,7 +189,7 @@ export const BidModal: React.FC<BidModalProps> = ({
                 logoUrl: logoPreview || undefined,
                 bidAmount,
                 depositAmount: calculatedDeposit,
-                currency
+                currency: 'USD'
               });
             }
             setIsSubmitting(false);
@@ -371,7 +355,7 @@ export const BidModal: React.FC<BidModalProps> = ({
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: '18px', fontWeight: 700, color: 'var(--ink)' }}>
-                    {currency === 'INR' ? '₹' : currency === 'EUR' ? '€' : '$'}
+                    $
                   </span>
                   <input
                     type="number"

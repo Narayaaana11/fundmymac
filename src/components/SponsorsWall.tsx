@@ -38,16 +38,25 @@ export const SponsorsWall: React.FC<SponsorsWallProps> = ({
       .limit(20)
       .then(({ data, error }) => {
         if (!error && data) {
-          setConfirmedSponsors(data);
+          // Filter out staging/test records so visitors see a clean, authentic state
+          const realSponsors = data.filter((s) => {
+            const name = (s.sponsor_name || '').toLowerCase();
+            return (
+              !name.includes('staging') &&
+              !name.includes('test') &&
+              !name.includes('verification')
+            );
+          });
+          setConfirmedSponsors(realSponsors);
         }
       });
   }, []);
 
   const foundingSlots = [
-    { id: 1, title: 'Marquee Title Partner', priceUsd: 500, priceEur: 460, priceInr: 42000, spot: 'Above Apple Logo · Highest IRL Visibility' },
-    { id: 2, title: 'Lid Prime Partner', priceUsd: 250, priceEur: 230, priceInr: 21000, spot: 'MacBook Pro Aluminum Lid · Demo Days' },
-    { id: 3, title: 'Accessory / Charger Partner', priceUsd: 150, priceEur: 138, priceInr: 12500, spot: '140W GaN Apple Fast Charger Body' },
-    { id: 4, title: 'The Corner Sponsor', priceUsd: 75, priceEur: 69, priceInr: 6300, spot: 'Sticky Top Left Widget Banner' }
+    { id: 1, title: 'Marquee Title Partner', priceUsd: 500, spot: 'Above Apple Logo · Highest IRL Visibility' },
+    { id: 2, title: 'Lid Prime Partner', priceUsd: 250, spot: 'MacBook Pro Aluminum Lid · Demo Days' },
+    { id: 3, title: 'Accessory / Charger Partner', priceUsd: 150, spot: '140W GaN Apple Fast Charger Body' },
+    { id: 4, title: 'The Corner Sponsor', priceUsd: 45, spot: 'Sticky Top Left Widget Banner' }
   ];
 
   const formatPrice = (_tier: SponsorTier) => {

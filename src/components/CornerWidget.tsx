@@ -1,7 +1,5 @@
-import React from 'react';
 import type { DisplayCurrency } from './BrandMyMacNavbar';
 import type { CornerState } from '../data/fundMyMacData';
-import { IS_PUBLIC_PREVIEW } from '../config/previewConfig';
 
 interface CornerWidgetProps {
   currency: DisplayCurrency;
@@ -10,30 +8,20 @@ interface CornerWidgetProps {
 }
 
 export const CornerWidget: React.FC<CornerWidgetProps> = ({
-  currency,
+  currency: _currency,
   cornerData,
   onClaimCorner
 }) => {
-  const currentPaid = IS_PUBLIC_PREVIEW
-    ? 'Public Preview'
-    : currency === 'INR'
-    ? `paid ₹${cornerData.amountInr.toLocaleString('en-IN')}`
-    : currency === 'EUR'
-    ? `paid ${cornerData.amountEur} €`
-    : `paid $${cornerData.amountUsd}`;
+  const currentPaid = cornerData.amountUsd > 0
+    ? `paid $${cornerData.amountUsd}`
+    : 'Available';
 
-  const nextPrice = IS_PUBLIC_PREVIEW
-    ? 'Pricing Coming Soon'
-    : currency === 'INR'
-    ? `₹${cornerData.nextBidInr.toLocaleString('en-IN')}`
-    : currency === 'EUR'
-    ? `${cornerData.nextBidEur} €`
-    : `$${cornerData.nextBidUsd}`;
+  const nextPrice = `$${cornerData.nextBidUsd || 45}`;
 
   return (
     <>
       {/* Floating Desktop Widget */}
-      <aside className="bmm-corner-desktop" id="corner">
+      <aside className="bmm-corner-desktop" id="corner-desktop-widget">
         <div className="bmm-corner-card" onClick={onClaimCorner}>
           <span className="bmm-corner-paid-tag">{currentPaid}</span>
           <img
@@ -46,11 +34,7 @@ export const CornerWidget: React.FC<CornerWidgetProps> = ({
           />
           <span className="bmm-corner-name">{cornerData.currentSponsor}</span>
           <span className="bmm-corner-claim-hint">
-            {IS_PUBLIC_PREVIEW ? (
-              <>Claim The Corner · <strong style={{ color: 'var(--blue)' }}>Join Waitlist</strong></>
-            ) : (
-              <>Claim this spot for <strong style={{ color: 'var(--blue)' }}>{nextPrice}</strong></>
-            )}
+            Claim this spot for <strong style={{ color: 'var(--blue)' }}>{nextPrice}</strong>
           </span>
         </div>
 
@@ -63,7 +47,7 @@ export const CornerWidget: React.FC<CornerWidgetProps> = ({
               className="bmm-btn-blue"
               style={{ flex: 1, fontSize: '12px', minHeight: '32px', padding: '6px 12px' }}
             >
-              {IS_PUBLIC_PREVIEW ? 'Waitlist — The Corner' : `Claim — ${nextPrice}`}
+              Claim — {nextPrice}
             </button>
             {cornerData.currentUrl && (
               <a
@@ -87,29 +71,35 @@ export const CornerWidget: React.FC<CornerWidgetProps> = ({
 
           <span className="bmm-corner-prev-title">PREVIOUSLY HERE</span>
           <div className="bmm-corner-prev-list">
-            {cornerData.history.slice(0, 4).map((item, idx) => (
-              <div key={idx} className="bmm-corner-prev-item">
-                <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bmm-corner-prev-link"
-                >
-                  <img
-                    src={item.avatarUrl || '/logo-small.png'}
-                    alt={item.name}
-                    className="bmm-corner-prev-avatar"
-                    onError={(e) => {
-                      (e.target as HTMLElement).style.display = 'none';
-                    }}
-                  />
-                  <span>{item.name}</span>
-                </a>
-                <span className="bmm-corner-prev-held">
-                  {IS_PUBLIC_PREVIEW ? 'Archived' : item.held}
-                </span>
+            {cornerData.history.length > 0 ? (
+              cornerData.history.slice(0, 4).map((item, idx) => (
+                <div key={idx} className="bmm-corner-prev-item">
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bmm-corner-prev-link"
+                  >
+                    <img
+                      src={item.avatarUrl || '/logo-small.png'}
+                      alt={item.name}
+                      className="bmm-corner-prev-avatar"
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = 'none';
+                      }}
+                    />
+                    <span>{item.name}</span>
+                  </a>
+                  <span className="bmm-corner-prev-held">
+                    {item.held}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div style={{ fontSize: '11px', color: 'var(--ink-2)', padding: '4px 0' }}>
+                No previous sponsors yet. Be the first to claim the corner!
               </div>
-            ))}
+            )}
           </div>
         </div>
       </aside>
@@ -137,7 +127,7 @@ export const CornerWidget: React.FC<CornerWidgetProps> = ({
             className="bmm-btn-get-spot"
             style={{ fontSize: '12px', minHeight: '32px', padding: '4px 12px' }}
           >
-            {IS_PUBLIC_PREVIEW ? 'Join Waitlist' : 'Claim Corner'}
+            Claim — {nextPrice}
           </button>
         </div>
       </div>

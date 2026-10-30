@@ -21,7 +21,6 @@ import { BrandMyMacFooter } from './components/BrandMyMacFooter';
 import { BidModal } from './components/BidModal';
 import { DonationModal } from './components/DonationModal';
 import { CheckoutVerificationModal } from './components/CheckoutVerificationModal';
-import { LiveActivityTicker } from './components/LiveActivityTicker';
 import { RealtimeMetricsRow } from './components/RealtimeMetricsRow';
 import { IS_PUBLIC_PREVIEW } from './config/previewConfig';
 
@@ -52,10 +51,8 @@ export const App: React.FC = () => {
   // Canonical database-backed spots state (never client-authoritative)
   const [spots, setSpots] = useState<BrandSpot[]>(BRAND_SPOTS);
 
-  // Canonical verified financial progress from captured transactions
+  // Canonical verified financial progress from captured transactions (strictly USD)
   const [raisedUsd, setRaisedUsd] = useState<number>(FUNDING_GOAL.raisedUsd);
-  const [raisedEur, setRaisedEur] = useState<number>(FUNDING_GOAL.raisedEur);
-  const [raisedInr, setRaisedInr] = useState<number>(FUNDING_GOAL.raisedInr || 0);
 
   const clearCheckoutUrlParams = useCallback(() => {
     if (typeof window !== 'undefined' && window.history.replaceState) {
@@ -88,6 +85,10 @@ export const App: React.FC = () => {
           prev.map((s) => {
             const dbSpot = data.find((d: { id: number }) => d.id === s.id);
             if (!dbSpot) return s;
+            const name = (dbSpot.sponsor_name || '').toLowerCase();
+            if (name.includes('staging') || name.includes('test') || name.includes('verification')) {
+              return s;
+            }
             return {
               ...s,
               isSold: Boolean(dbSpot.is_sold || dbSpot.status === 'sold'),
@@ -106,19 +107,13 @@ export const App: React.FC = () => {
     // 2. Fetch canonical financial totals strictly from site_stats
     client
       .from('site_stats')
-      .select('total_raised_usd_cents, total_raised_eur_cents, total_raised_inr_paise')
+      .select('total_raised_usd_cents')
       .eq('id', 1)
       .maybeSingle()
       .then(({ data, error }) => {
         if (error || !data) return;
         if (typeof data.total_raised_usd_cents === 'number') {
           setRaisedUsd(Math.round(data.total_raised_usd_cents / 100));
-        }
-        if (typeof data.total_raised_eur_cents === 'number') {
-          setRaisedEur(Math.round(data.total_raised_eur_cents / 100));
-        }
-        if (typeof data.total_raised_inr_paise === 'number') {
-          setRaisedInr(Math.round(data.total_raised_inr_paise / 100));
         }
       });
   }, []);
@@ -148,6 +143,10 @@ export const App: React.FC = () => {
           bid_count?: number;
         };
         if (newRecord && typeof newRecord.id === 'number') {
+          const name = (newRecord.sponsor_name || '').toLowerCase();
+          if (name.includes('staging') || name.includes('test') || name.includes('verification')) {
+            return;
+          }
           setSpots((prev) =>
             prev.map((s) =>
               s.id === newRecord.id
@@ -171,19 +170,9 @@ export const App: React.FC = () => {
         if (!isMounted) return;
         const newStats = payload.new as {
           total_raised_usd_cents?: number;
-          total_raised_eur_cents?: number;
-          total_raised_inr_paise?: number;
         };
-        if (newStats) {
-          if (typeof newStats.total_raised_usd_cents === 'number') {
-            setRaisedUsd(Math.round(newStats.total_raised_usd_cents / 100));
-          }
-          if (typeof newStats.total_raised_eur_cents === 'number') {
-            setRaisedEur(Math.round(newStats.total_raised_eur_cents / 100));
-          }
-          if (typeof newStats.total_raised_inr_paise === 'number') {
-            setRaisedInr(Math.round(newStats.total_raised_inr_paise / 100));
-          }
+        if (newStats && typeof newStats.total_raised_usd_cents === 'number') {
+          setRaisedUsd(Math.round(newStats.total_raised_usd_cents / 100));
         }
       })
       .subscribe((status) => {
@@ -246,23 +235,9 @@ export const App: React.FC = () => {
     const depositUsd =
       bidData.currency === 'USD'
         ? bidData.depositAmount
-        : bidData.currency === 'EUR'
-        ? Math.round(bidData.depositAmount * 1.08)
         : Math.round(bidData.depositAmount / 84);
-    const depositEur =
-      bidData.currency === 'EUR'
-        ? bidData.depositAmount
-        : bidData.currency === 'USD'
-        ? Math.round(bidData.depositAmount * 0.92)
-        : Math.round(bidData.depositAmount / 91);
-    const depositInr =
-      bidData.currency === 'INR'
-        ? bidData.depositAmount
-        : Math.round(depositUsd * 84);
 
     setRaisedUsd((prev) => prev + depositUsd);
-    setRaisedEur((prev) => prev + depositEur);
-    setRaisedInr((prev) => prev + depositInr);
   };
 
   // Handle successful dynamic corner takeover
@@ -300,30 +275,12 @@ export const App: React.FC = () => {
     }));
 
     setRaisedUsd((prev) => prev + newSponsor.amountUsd);
-    setRaisedEur((prev) => prev + newSponsor.amountEur);
-    setRaisedInr((prev) => prev + newSponsor.amountInr);
   };
 
-  const totalRaised =
-    currency === 'INR'
-      ? `₹${raisedInr.toLocaleString('en-IN')}`
-      : currency === 'EUR'
-      ? `${raisedEur.toLocaleString()} €`
-      : `$${raisedUsd.toLocaleString()}`;
-
-  const goalTarget =
-    currency === 'INR'
-      ? `₹${FUNDING_GOAL.targetInr.toLocaleString('en-IN')}`
-      : currency === 'EUR'
-      ? `${FUNDING_GOAL.targetEur.toLocaleString()} €`
-      : `$${FUNDING_GOAL.targetUsd.toLocaleString()}`;
-
+  const totalRaised = `$${raisedUsd.toLocaleString()}`;
+  const goalTarget = `$${FUNDING_GOAL.targetUsd.toLocaleString()}`;
   const percentProgress = Math.min(
-    Math.round(
-      currency === 'INR'
-        ? (raisedInr / FUNDING_GOAL.targetInr) * 100
-        : (raisedUsd / FUNDING_GOAL.targetUsd) * 100
-    ),
+    Math.round((raisedUsd / FUNDING_GOAL.targetUsd) * 100),
     100
   );
 
@@ -515,6 +472,40 @@ export const App: React.FC = () => {
           onOpenCustomDonation={() => handleOpenDonate()}
         />
 
+        {/* Dedicated Section for The Corner (#corner) */}
+        <section id="corner" className="bmm-section bmm-corner-section">
+          <div className="bmm-section-inner">
+            <div className="bmm-pill-badge-indigo">
+              <span>⚡ THE CORNER TAKEOVER</span>
+            </div>
+            <h2 className="bmm-section-title">The Sticky Corner Sponsor</h2>
+            <p className="bmm-section-subtitle">
+              Claim the sticky top-left widget seen by every visitor browsing Fund My Mac. Continuous branding across the desktop experience.
+            </p>
+            <div className="bmm-corner-feature-box">
+              <div className="bmm-corner-feature-badge">
+                {cornerData.amountUsd > 0 ? `Current Sponsor: ${cornerData.currentSponsor}` : 'Status: Spot Currently Open'}
+              </div>
+              <h3 className="bmm-corner-feature-title">
+                Next Takeover Bid: <span className="bmm-corner-feature-price">${cornerData.nextBidUsd || 45}</span>
+              </h3>
+              <p className="bmm-corner-feature-text">
+                When you take over the corner, your logo, company name, and link take the spotlight. Outbid the current sponsor at any time to claim the top-left banner.
+              </p>
+              <div className="bmm-corner-feature-actions">
+                <button
+                  type="button"
+                  onClick={() => setIsCornerModalOpen(true)}
+                  className="bmm-btn-blue"
+                  style={{ padding: '12px 28px', fontSize: '15px' }}
+                >
+                  ⚡ Claim The Corner (${cornerData.nextBidUsd || 45})
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* 4. The Live Auction & Spots Grid */}
         <AuctionSection
           currency={currency}
@@ -587,15 +578,6 @@ export const App: React.FC = () => {
           }}
         />
       )}
-
-      {/* Floating Live Activity Ticker Toast */}
-      <LiveActivityTicker
-        spots={spots}
-        onSpotSelect={() => {
-          const el = document.getElementById('sponsors');
-          if (el) el.scrollIntoView({ behavior: 'smooth' });
-        }}
-      />
     </div>
   );
 };
