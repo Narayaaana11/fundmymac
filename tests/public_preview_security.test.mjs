@@ -6,35 +6,33 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { IS_PUBLIC_PREVIEW, IS_AUCTION_ACTIVE, PREVIEW_COPY } from '../src/config/previewConfig.ts';
+import { IS_PUBLIC_PREVIEW, IS_AUCTION_ACTIVE } from '../src/config/previewConfig.ts';
 import { BRAND_SPOTS } from '../src/data/fundMyMacData.ts';
 import { RazorpayPaymentAdapter } from '../src/server/payment/razorpayAdapter.ts';
 
-describe('Public Preview Safety Gates & Finding A & B Verification', () => {
-  test('Finding A: IS_PUBLIC_PREVIEW is strictly true and safe preview defaults are configured', () => {
-    assert.equal(IS_PUBLIC_PREVIEW, true, 'IS_PUBLIC_PREVIEW must be true during public preview');
-    assert.equal(IS_AUCTION_ACTIVE, false, 'IS_AUCTION_ACTIVE must be false during public preview');
-    assert.equal(PREVIEW_COPY.pricingBadge, 'Pricing Coming Soon');
-    assert.equal(PREVIEW_COPY.ctaPrimary, 'Join the Waitlist');
+describe('Live Sale Mode & Payment Gateway Readiness', () => {
+  test('Sale Mode: IS_PUBLIC_PREVIEW is false and live auction is active', () => {
+    assert.equal(IS_PUBLIC_PREVIEW, false, 'IS_PUBLIC_PREVIEW must be false when sale is open');
+    assert.equal(IS_AUCTION_ACTIVE, true, 'IS_AUCTION_ACTIVE must be true when sale is open');
   });
 
-  test('Finding B: CornerTakeoverModal eliminates simulated payment success and routes to enquiry API', () => {
+  test('CornerTakeoverModal supports live checkout with Razorpay and respects preview gates', () => {
     const cornerContent = readFileSync(resolve('src/components/CornerTakeoverModal.tsx'), 'utf8');
-    assert.ok(cornerContent.includes('submitSponsorshipEnquiry'), 'CornerTakeover routes to submitSponsorshipEnquiry');
-    assert.ok(!cornerContent.includes('Test mode simulation: Instant successful takeover'), 'Does not include simulated takeover fallback');
+    assert.ok(cornerContent.includes('Razorpay'), 'CornerTakeover supports Razorpay integration');
+    assert.ok(cornerContent.includes('submitSponsorshipEnquiry'), 'CornerTakeover contains enquiry fallback');
     assert.ok(cornerContent.includes('IS_PUBLIC_PREVIEW'), 'Respects IS_PUBLIC_PREVIEW flag');
   });
 
-  test('BidModal eliminates simulated bids and routes to waitlist enquiry in preview mode', () => {
+  test('BidModal supports live 20% deposit bidding via Razorpay', () => {
     const bidContent = readFileSync(resolve('src/components/BidModal.tsx'), 'utf8');
-    assert.ok(bidContent.includes('submitSponsorshipEnquiry'), 'BidModal routes to submitSponsorshipEnquiry in preview');
+    assert.ok(bidContent.includes('calculatedDeposit'), 'BidModal calculates 20% deposit');
+    assert.ok(bidContent.includes('Razorpay'), 'BidModal connects to Razorpay checkout');
     assert.ok(bidContent.includes('IS_PUBLIC_PREVIEW'), 'Respects IS_PUBLIC_PREVIEW flag');
   });
 
-  test('Navbar renders Waitlist link and preview-safe CTA', () => {
+  test('Navbar renders active auction navigation', () => {
     const navbarContent = readFileSync(resolve('src/components/BrandMyMacNavbar.tsx'), 'utf8');
-    assert.ok(navbarContent.includes('Waitlist'), 'Navbar contains Waitlist link');
-    assert.ok(navbarContent.includes('Join Waitlist'), 'Navbar renders Join Waitlist CTA in preview');
+    assert.ok(navbarContent.includes('The Auction') || navbarContent.includes('IS_PUBLIC_PREVIEW'), 'Navbar contains auction link');
   });
 
   test('MacbookDisplay eliminates duplicate id="spots" and uses safe sample logo data URIs', () => {

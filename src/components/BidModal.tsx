@@ -35,10 +35,18 @@ export const BidModal: React.FC<BidModalProps> = ({
   const [email, setEmail] = useState('');
   const [logoPreview, setLogoPreview] = useState<string>('');
   const [logoError, setLogoError] = useState<string | null>(null);
+  const [razorpayKeyInput, setRazorpayKeyInput] = useState<string>(() =>
+    typeof window !== 'undefined' ? localStorage.getItem('fundmymac_razorpay_key') || '' : ''
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const envKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_RAZORPAY_KEY_ID) || '';
+  const effectiveKey = envKey && !envKey.includes('placeholder') && !envKey.includes('preview')
+    ? envKey
+    : razorpayKeyInput;
 
   // USD-only floor & increments
   const currentTopBid = !spot ? 0 : spot.topBidUsd;
@@ -167,13 +175,18 @@ export const BidModal: React.FC<BidModalProps> = ({
 
     try {
       const isScriptLoaded = await loadRazorpayScript();
-      const testKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_RAZORPAY_KEY_ID) || '';
+
+      if (!effectiveKey) {
+        setErrorMessage('Please provide your Razorpay Key ID (rzp_test_... or rzp_live_...) below to proceed with bidding.');
+        setIsSubmitting(false);
+        return;
+      }
 
       const depositMinorUnits = calculatedDeposit * 100;
 
-      if (isScriptLoaded && window.Razorpay && testKey && !testKey.includes('placeholder') && !testKey.includes('preview')) {
+      if (isScriptLoaded && window.Razorpay) {
         const rzp = new window.Razorpay({
-          key: testKey,
+          key: effectiveKey,
           amount: depositMinorUnits,
           currency: 'USD',
           name: 'Fund My Mac · Auction Bid Deposit',
@@ -206,11 +219,11 @@ export const BidModal: React.FC<BidModalProps> = ({
         rzp.open();
         setIsSubmitting(false);
       } else {
-        setErrorMessage('Payment gateway is currently awaiting merchant verification. Please join the waitlist.');
+        setErrorMessage('Failed to load Razorpay checkout script. Please check your network connection.');
         setIsSubmitting(false);
       }
     } catch {
-      setErrorMessage('Payment gateway connection error. Please join the waitlist.');
+      setErrorMessage('Payment gateway connection error. Please try again.');
       setIsSubmitting(false);
     }
   };
@@ -385,6 +398,29 @@ export const BidModal: React.FC<BidModalProps> = ({
                 }}
               >
                 ⚠️ {errorMessage}
+              </div>
+            )}
+
+            {(!envKey || envKey.includes('placeholder')) && (
+              <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', marginBottom: '12px' }}>
+                <label className="bmm-form-label" style={{ fontWeight: 600, color: 'var(--ink)' }}>
+                  🔑 Razorpay Key ID:
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. rzp_test_..."
+                  value={razorpayKeyInput}
+                  onChange={(e) => {
+                    const val = e.target.value.trim();
+                    setRazorpayKeyInput(val);
+                    if (typeof window !== 'undefined') localStorage.setItem('fundmymac_razorpay_key', val);
+                  }}
+                  className="bmm-input-field"
+                  style={{ fontSize: '13px', padding: '7px 10px', background: '#fff' }}
+                />
+                <span style={{ fontSize: '11px', color: 'var(--ink-2)', display: 'block', marginTop: '4px' }}>
+                  Enter your Razorpay test or live Key ID (or configure in .env)
+                </span>
               </div>
             )}
 

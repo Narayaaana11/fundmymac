@@ -100,6 +100,11 @@ export const CornerWidget: React.FC<CornerWidgetProps> = ({
                 No previous sponsors yet. Be the first to claim the corner!
               </div>
             )}
+            {cornerData.history.length > 0 && (
+              <a href="#corner" className="bmm-corner-see-all">
+                See all {cornerData.history.length} →
+              </a>
+            )}
           </div>
         </div>
       </aside>

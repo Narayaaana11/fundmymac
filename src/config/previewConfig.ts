@@ -10,9 +10,9 @@
  * - Zero simulated purchases, fake payment confirmations, or inventory mutations.
  */
 
-export const IS_PUBLIC_PREVIEW = true;
-export const IS_AUCTION_ACTIVE = false;
-export const IS_TEST_MODE = false;
+export const IS_PUBLIC_PREVIEW = false;
+export const IS_AUCTION_ACTIVE = true;
+export const IS_TEST_MODE = true;
 
 export const PREVIEW_COPY = {
   campaignName: 'Fund My Mac',

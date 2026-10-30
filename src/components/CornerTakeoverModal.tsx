@@ -33,10 +33,18 @@ export const CornerTakeoverModal: React.FC<CornerTakeoverModalProps> = ({
   const [email, setEmail] = useState('');
   const [logoPreview, setLogoPreview] = useState<string>('');
   const [logoError, setLogoError] = useState<string | null>(null);
+  const [razorpayKeyInput, setRazorpayKeyInput] = useState<string>(() =>
+    typeof window !== 'undefined' ? localStorage.getItem('fundmymac_razorpay_key') || '' : ''
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const envKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_RAZORPAY_KEY_ID) || '';
+  const effectiveKey = envKey && !envKey.includes('placeholder') && !envKey.includes('preview')
+    ? envKey
+    : razorpayKeyInput;
 
   const handleClose = useCallback(() => {
     setIsSubmitted(false);
@@ -135,11 +143,16 @@ export const CornerTakeoverModal: React.FC<CornerTakeoverModalProps> = ({
     // Live Production Flow (Only active when public preview is disabled and live keys configured)
     try {
       const isScriptLoaded = await loadRazorpayScript();
-      const testKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_RAZORPAY_KEY_ID) || '';
 
-      if (isScriptLoaded && window.Razorpay && testKey && !testKey.includes('placeholder') && !testKey.includes('preview')) {
+      if (!effectiveKey) {
+        setErrorMessage('Please enter your Razorpay Key ID (rzp_test_... or rzp_live_...) below to proceed.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (isScriptLoaded && window.Razorpay) {
         const rzp = new window.Razorpay({
-          key: testKey,
+          key: effectiveKey,
           amount: nextPriceAmount * 100,
           currency: 'USD',
           name: 'Fund My Mac · The Corner',
@@ -168,12 +181,11 @@ export const CornerTakeoverModal: React.FC<CornerTakeoverModalProps> = ({
         rzp.open();
         setIsSubmitting(false);
       } else {
-        // Honest disabled state when payment gateway is not yet active
-        setErrorMessage('Payment gateway is currently pending merchant activation. Please join the waitlist instead.');
+        setErrorMessage('Failed to load Razorpay checkout script. Please check your network connection.');
         setIsSubmitting(false);
       }
     } catch {
-      setErrorMessage('Checkout failed to launch. Please join the waitlist.');
+      setErrorMessage('Checkout failed to launch. Please try again.');
       setIsSubmitting(false);
     }
   };
@@ -305,6 +317,29 @@ export const CornerTakeoverModal: React.FC<CornerTakeoverModalProps> = ({
             )}
 
             <form onSubmit={handleCornerSubmit} className="bmm-outbid-form">
+              {(!envKey || envKey.includes('placeholder')) && (
+                <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', marginBottom: '12px' }}>
+                  <label className="bmm-form-label" style={{ fontWeight: 600, color: 'var(--ink)' }}>
+                    🔑 Razorpay Key ID:
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. rzp_test_..."
+                    value={razorpayKeyInput}
+                    onChange={(e) => {
+                      const val = e.target.value.trim();
+                      setRazorpayKeyInput(val);
+                      if (typeof window !== 'undefined') localStorage.setItem('fundmymac_razorpay_key', val);
+                    }}
+                    className="bmm-input-field"
+                    style={{ fontSize: '13px', padding: '7px 10px', background: '#fff' }}
+                  />
+                  <span style={{ fontSize: '11px', color: 'var(--ink-2)', display: 'block', marginTop: '4px' }}>
+                    Enter your Razorpay test or live Key ID (or configure in .env)
+                  </span>
+                </div>
+              )}
+
               <div className="form-group" style={{ marginBottom: '10px' }}>
                 <label className="bmm-form-label">
                   Brand / Sponsor Name: <span style={{ color: '#ef4444' }}>*</span>

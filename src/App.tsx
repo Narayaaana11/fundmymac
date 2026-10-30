@@ -411,15 +411,16 @@ export const App: React.FC = () => {
             >
               {IS_PUBLIC_PREVIEW
                 ? '🏷️ Inspect Sponsorship Spots'
-                : `🏷️ Bid on a Spot (From ${currency === 'INR' ? '₹11,300' : '$135'})`}
+                : '🏷️ Bid on a Spot (From $135)'}
             </button>
-            <a
-              href="#waitlist"
+            <button
+              type="button"
+              onClick={() => setIsLeaderboardOpen(true)}
               className="bmm-btn-outline"
-              style={{ padding: '12px 22px', fontSize: '14px', borderRadius: '980px', display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}
+              style={{ padding: '12px 22px', fontSize: '14px', borderRadius: '980px', display: 'inline-flex', alignItems: 'center' }}
             >
-              📝 Join Priority Waitlist
-            </a>
+              🏆 Official Leaderboard
+            </button>
             <button
               type="button"
               onClick={() => setIsCornerModalOpen(true)}

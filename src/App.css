@@ -1383,14 +1383,13 @@
   justify-content: center;
 }
 
-/* Mobile Corner Bar (Hidden on desktop & laptops, clean bar on small mobile) */
-.bmm-corner-mobile {
-  display: none;
-}
-
-@media (max-width: 768px) {
+/* Corner Widget Responsive Behavior (Matching BrandMyMac xl:block) */
+@media (max-width: 1279px) {
+  .bmm-corner-desktop {
+    display: none !important;
+  }
   .bmm-corner-mobile {
-    display: block;
+    display: block !important;
     position: fixed;
     bottom: 0;
     left: 0;
@@ -1402,41 +1401,56 @@
     padding: 8px 16px;
     box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.05);
   }
-  .bmm-corner-mobile-inner {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    max-width: 480px;
-    margin: 0 auto;
-  }
-  .bmm-corner-mobile-left {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-  }
-  .bmm-corner-mobile-text {
-    display: flex;
-    flex-direction: column;
-    text-align: left;
-  }
-  .bmm-corner-mobile-label {
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--ink-2);
-    letter-spacing: 0.04em;
-  }
-  .bmm-corner-mobile-name {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--ink);
-  }
 }
 
-/* Responsive */
-@media (max-width: 1540px) {
+.bmm-corner-mobile-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 480px;
+  margin: 0 auto;
+}
+.bmm-corner-mobile-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.bmm-corner-mobile-text {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+.bmm-corner-mobile-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink-2);
+  letter-spacing: 0.04em;
+}
+.bmm-corner-mobile-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+@media (min-width: 1280px) {
   .bmm-corner-desktop {
-    display: none;
+    display: block !important;
+  }
+  .bmm-corner-mobile {
+    display: none !important;
+  }
+  /* Ensure hero title has breathing room from the 208px fixed corner card */
+  .bmm-hero {
+    max-width: 820px;
+    margin: 0 auto;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+  .bmm-h1 {
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
   }
 }
 

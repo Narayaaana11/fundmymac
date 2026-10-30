@@ -59,8 +59,8 @@ export const SponsorsWall: React.FC<SponsorsWallProps> = ({
     { id: 4, title: 'The Corner Sponsor', priceUsd: 45, spot: 'Sticky Top Left Widget Banner' }
   ];
 
-  const formatPrice = (_tier: SponsorTier) => {
-    return 'Pricing Coming Soon';
+  const formatPrice = (tier: SponsorTier) => {
+    return `$${tier.priceUsd.toLocaleString()}`;
   };
 
   return (
@@ -148,7 +148,7 @@ export const SponsorsWall: React.FC<SponsorsWallProps> = ({
                 {slot.spot}
               </p>
               <strong style={{ fontSize: '14px', color: 'var(--blue)' }}>
-                Pricing Coming Soon
+                ${slot.priceUsd}
               </strong>
               <span className="sponsor-visit-link" style={{ marginTop: '8px' }}>
                 Express Interest ›
