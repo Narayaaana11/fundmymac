@@ -609,19 +609,19 @@ export const CORNER_DATA: CornerState = {
 export const FAQ_DATA = [
   {
     question: 'How does the 14-Day Auction work?',
-    answer: 'Every spot on the MacBook Pro (lid, palm rests, and accessories) starts at a floor price ($135 Small, $215 Medium, $430 Marquee). Brands compete by placing higher bids (minimum +$10 / +₹800 increment). The highest bid when the 14-day countdown expires wins the spot permanently for the lifetime of the machine.'
+    answer: 'Every spot on the MacBook Pro (lid, palm rests, and accessories) features tier-based reserve pricing (Small, Medium, Marquee). During active auctions, brands compete by placing higher bids with clear increments. The highest bid when the 14-day countdown expires wins the spot permanently for the lifetime of the machine.'
   },
   {
     question: 'How does the 20% deposit work?',
-    answer: 'When placing a bid, you only pay a 20% commitment deposit via card/UPI (minimum $10 / ₹800). If another brand outbids you, your 20% deposit is immediately refunded in full automatically. If you win at the end of the auction, your deposit counts toward the total and you receive a payment link for the remaining 80% balance.'
+    answer: 'When placing a bid during live auctions, sponsors only pay a 20% commitment deposit. If another brand outbids you, your 20% deposit is refunded automatically. If you win at auction close, your deposit counts toward the total and you receive an invoice for the remaining balance.'
   },
   {
     question: 'What happens if someone outbids me?',
-    answer: 'Your 20% deposit is refunded back to your card instantly, and you receive an alert giving you the option to swing back with a higher bid before the 14-day timer expires.'
+    answer: 'Your 20% deposit is refunded back to your account automatically, and you receive an alert giving you the option to submit a higher bid before the countdown expires.'
   },
   {
     question: 'What is The Corner Takeover?',
-    answer: 'The sticky corner widget at the top-left of every page view can be claimed dynamically by any sponsor. Outbid the current holder by $10 / ₹800 to take over the corner immediately. Even if outbid later, you permanently remain on the "Previously here" sponsor history list.'
+    answer: 'The sticky corner widget at the top-left of every page view can be claimed dynamically by any sponsor. Outbid the current holder to take over the corner immediately. Even if outbid later, you permanently remain on the "Previously here" sponsor history list.'
   },
   {
     question: 'Which machine are you purchasing?',

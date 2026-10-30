@@ -50,6 +50,13 @@ export function fundMyMacApiPlugin(): Plugin {
             (url.pathname === '/api/checkout/create-order' || url.pathname === '/api/checkout/create-session') &&
             req.method === 'POST'
           ) {
+            if (process.env.CHECKOUT_ENABLED !== 'true') {
+              return sendJson(res, 403, {
+                success: false,
+                previewMode: true,
+                error: 'Order creation rejected: Public preview is active; checkout is disabled pending merchant approval.'
+              });
+            }
             const body = await parseJsonBody<CreateCheckoutSessionParams>(req);
             const result = await defaultPaymentAdapter.createCheckoutSession(body);
             return sendJson(res, result.success ? 200 : 400, result);

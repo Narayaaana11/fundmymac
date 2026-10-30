@@ -3082,3 +3082,34 @@
     display: none;
   }
 }
+
+/* Narrow mobile viewport (320px - 380px) zero-overflow guarantee */
+@media (max-width: 380px) {
+  .bmm-page {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+  .bmm-hero {
+    padding: 24px 10px 40px 10px;
+  }
+  .bmm-nav-inner {
+    padding: 0 10px;
+  }
+  .bmm-pill-badge-green,
+  .bmm-spots-taken-badge {
+    max-width: 100%;
+    font-size: 10px;
+    padding: 4px 8px;
+    white-space: normal;
+    text-align: center;
+    box-sizing: border-box;
+  }
+  .bmm-hero-bottom-actions button,
+  .bmm-hero-bottom-actions a {
+    width: 100%;
+    justify-content: center;
+    font-size: 13px !important;
+    padding: 10px 14px !important;
+  }
+}
+

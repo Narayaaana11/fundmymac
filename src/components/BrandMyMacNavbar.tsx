@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AuctionCountdown } from './AuctionCountdown';
+import { IS_PUBLIC_PREVIEW } from '../config/previewConfig';
 
 export type DisplayCurrency = 'INR' | 'USD' | 'EUR';
 
@@ -19,11 +20,11 @@ export const BrandMyMacNavbar: React.FC<BrandMyMacNavbarProps> = ({
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   const navLinks = [
-    { label: 'The Auction', href: '#spots' },
+    { label: IS_PUBLIC_PREVIEW ? 'Spaces' : 'The Auction', href: '#spots' },
     { label: 'The Machine', href: '#macbook-showcase' },
     { label: 'The Corner', href: '#corner' },
     { label: 'The Mission', href: '#vesper-mission' },
-    { label: 'IRL Events', href: '#events' },
+    { label: 'Waitlist', href: '#waitlist' },
     { label: 'FAQ', href: '#faq' }
   ];
 
@@ -117,7 +118,7 @@ export const BrandMyMacNavbar: React.FC<BrandMyMacNavbarProps> = ({
               onClick={onGetSpotClick}
               className="bmm-btn-get-spot"
             >
-              Bid on a Spot
+              {IS_PUBLIC_PREVIEW ? 'Join Waitlist' : 'Bid on a Spot'}
             </button>
 
             {/* Mobile Hamburger Toggle Button */}

@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { BrandSpot } from '../data/fundMyMacData';
 import { validateLogoFile } from '../server/payment/assetValidator';
 import { loadRazorpayScript } from '../lib/checkoutApi';
+import { submitSponsorshipEnquiry } from '../lib/enquiryApi';
+import { IS_PUBLIC_PREVIEW } from '../config/previewConfig';
 import type { DisplayCurrency } from './BrandMyMacNavbar';
 
 interface BidModalProps {
@@ -52,9 +54,14 @@ export const BidModal: React.FC<BidModalProps> = ({
 
   const [bidAmount, setBidAmount] = useState<number>(minRequiredBid);
 
-  // Sync bid amount when spot or currency changes
+  // Sync bid amount when spot or currency changes without unneeded renders
+  const prevSpotIdRef = useRef<number | null>(null);
+  const prevCurrencyRef = useRef<string>(currency);
+
   useEffect(() => {
-    if (spot) {
+    if (spot && (prevSpotIdRef.current !== spot.id || prevCurrencyRef.current !== currency)) {
+      prevSpotIdRef.current = spot.id;
+      prevCurrencyRef.current = currency;
       const top =
         currency === 'INR'
           ? spot.topBidInr || Math.round(spot.topBidUsd * 84)
@@ -65,10 +72,16 @@ export const BidModal: React.FC<BidModalProps> = ({
     }
   }, [spot, currency, minIncrement]);
 
+  const handleClose = useCallback(() => {
+    setIsSuccess(false);
+    setErrorMessage(null);
+    onClose();
+  }, [onClose]);
+
   useEffect(() => {
     if (!spot) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') handleClose();
     };
     window.addEventListener('keydown', handleKeyDown);
     document.body.style.overflow = 'hidden';
@@ -76,7 +89,7 @@ export const BidModal: React.FC<BidModalProps> = ({
       window.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
     };
-  }, [spot, onClose]);
+  }, [spot, handleClose]);
 
   if (!spot) return null;
 
@@ -84,7 +97,6 @@ export const BidModal: React.FC<BidModalProps> = ({
   const depositPercent = 0.2;
   const minDeposit = currency === 'INR' ? 800 : 10;
   const calculatedDeposit = Math.max(Math.round(bidAmount * depositPercent), minDeposit);
-  const remainingBalance = Math.max(bidAmount - calculatedDeposit, 0);
 
   const formatCurrency = (val: number) => {
     if (currency === 'INR') return `₹${val.toLocaleString('en-IN')}`;
@@ -117,11 +129,6 @@ export const BidModal: React.FC<BidModalProps> = ({
     e.preventDefault();
     setErrorMessage(null);
 
-    if (bidAmount < minRequiredBid) {
-      setErrorMessage(`Bid must be at least ${formatCurrency(minRequiredBid)} (Current top bid + minimum increment).`);
-      return;
-    }
-
     if (!brandName.trim()) {
       setErrorMessage('Please enter your company or brand name.');
       return;
@@ -133,22 +140,54 @@ export const BidModal: React.FC<BidModalProps> = ({
     }
 
     if (!email.trim() || !email.includes('@')) {
-      setErrorMessage('A valid contact email is required to receive outbid alerts and final settlement links.');
+      setErrorMessage('A valid contact email is required to receive notification.');
       return;
     }
 
     setIsSubmitting(true);
 
+    // Finding A & B Fix: In Public Preview mode, route directly to honest waitlist
+    // Zero simulated payment, zero false state mutations, zero inventory locking
+    if (IS_PUBLIC_PREVIEW) {
+      try {
+        const result = await submitSponsorshipEnquiry({
+          name: brandName.trim(),
+          email: email.trim(),
+          websiteUrl: websiteUrl.trim(),
+          preferredSpotId: spot.id,
+          message: `Public preview waitlist expression for Spot #${spot.id} (${spot.name})`
+        });
+
+        if (!result.success) {
+          setErrorMessage(result.error || 'Failed to submit waitlist registration. Please try again.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        setIsSuccess(true);
+        setIsSubmitting(false);
+        return;
+      } catch {
+        setErrorMessage('Network connection error. Please try again shortly.');
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
+    // Live mode (only reached when IS_PUBLIC_PREVIEW === false and live keys present)
+    if (bidAmount < minRequiredBid) {
+      setErrorMessage(`Bid must be at least ${formatCurrency(minRequiredBid)} (Current top bid + minimum increment).`);
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       const isScriptLoaded = await loadRazorpayScript();
-      const testKey =
-        (typeof import.meta !== 'undefined' && import.meta.env?.VITE_RAZORPAY_KEY_ID) ||
-        'rzp_test_public_preview';
+      const testKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_RAZORPAY_KEY_ID) || '';
 
-      const depositMinorUnits = currency === 'INR' ? calculatedDeposit * 100 : calculatedDeposit * 100;
+      const depositMinorUnits = calculatedDeposit * 100;
 
-      if (isScriptLoaded && window.Razorpay && testKey && !testKey.includes('public_preview')) {
-        // Live Razorpay popup for 20% deposit
+      if (isScriptLoaded && window.Razorpay && testKey && !testKey.includes('placeholder') && !testKey.includes('preview')) {
         const rzp = new window.Razorpay({
           key: testKey,
           amount: depositMinorUnits,
@@ -181,26 +220,13 @@ export const BidModal: React.FC<BidModalProps> = ({
           }
         });
         rzp.open();
+        setIsSubmitting(false);
       } else {
-        // Test Mode Simulation: instant successful bid confirmation
-        setTimeout(() => {
-          if (onBidPlaced) {
-            onBidPlaced(spot.id, {
-              brandName: brandName.trim(),
-              websiteUrl: websiteUrl.trim(),
-              email: email.trim(),
-              logoUrl: logoPreview || undefined,
-              bidAmount,
-              depositAmount: calculatedDeposit,
-              currency
-            });
-          }
-          setIsSubmitting(false);
-          setIsSuccess(true);
-        }, 800);
+        setErrorMessage('Payment gateway is currently awaiting merchant verification. Please join the waitlist.');
+        setIsSubmitting(false);
       }
     } catch {
-      setErrorMessage('Payment gateway connection error. Please try again.');
+      setErrorMessage('Payment gateway connection error. Please join the waitlist.');
       setIsSubmitting(false);
     }
   };
@@ -226,7 +252,7 @@ export const BidModal: React.FC<BidModalProps> = ({
 
         <div className="bmm-modal-header-badge">
           <span className="modal-pill-tag">
-            Spot #{spot.id} · {spot.surface.toUpperCase()} · 14-DAY AUCTION
+            Spot #{spot.id} · {spot.surface.toUpperCase()} · {IS_PUBLIC_PREVIEW ? 'PUBLIC PREVIEW' : '14-DAY AUCTION'}
           </span>
         </div>
 
@@ -240,21 +266,23 @@ export const BidModal: React.FC<BidModalProps> = ({
         {/* Current Bid Stats Grid */}
         <div className="bmm-modal-stats-grid">
           <div>
-            <span className="bmm-modal-stat-label">Current Top Bid</span>
+            <span className="bmm-modal-stat-label">
+              {IS_PUBLIC_PREVIEW ? 'Pricing' : 'Current Top Bid'}
+            </span>
+            <span className="bmm-modal-stat-val tabular-nums" style={{ color: '#0071e3', fontSize: '15px' }}>
+              {IS_PUBLIC_PREVIEW ? 'Pricing Coming Soon' : formatCurrency(currentTopBid)}
+            </span>
+          </div>
+          <div>
+            <span className="bmm-modal-stat-label">Availability</span>
             <span className="bmm-modal-stat-val tabular-nums" style={{ color: '#34c759' }}>
-              {formatCurrency(currentTopBid)}
+              {spot.isSold ? 'Reserved' : 'Open for Preview'}
             </span>
           </div>
           <div>
-            <span className="bmm-modal-stat-label">Total Bids Placed</span>
+            <span className="bmm-modal-stat-label">Placement</span>
             <span className="bmm-modal-stat-val tabular-nums">
-              {spot.bidCount} {spot.bidCount === 1 ? 'bid' : 'bids'}
-            </span>
-          </div>
-          <div>
-            <span className="bmm-modal-stat-label">Min. Increment</span>
-            <span className="bmm-modal-stat-val tabular-nums" style={{ color: 'var(--blue)' }}>
-              +{formatCurrency(minIncrement)}
+              {spot.surface === 'lid' ? 'Outer Aluminum Lid' : spot.surface === 'inside' ? 'Palm Rest Area' : 'Accessory'}
             </span>
           </div>
           <div>
@@ -288,110 +316,77 @@ export const BidModal: React.FC<BidModalProps> = ({
           <div style={{ textAlign: 'center', padding: '24px 16px' }}>
             <div style={{ fontSize: '48px', marginBottom: '12px' }}>🎉</div>
             <h4 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--ink)', marginBottom: '8px' }}>
-              Your Bid is Officially Placed!
+              You're on the Priority Waitlist!
             </h4>
             <p style={{ fontSize: '14px', color: 'var(--ink-2)', lineHeight: 1.6, maxWidth: '440px', margin: '0 auto 16px' }}>
-              You are now the leading bidder for <strong>Spot #{spot.id}</strong> at{' '}
-              <strong style={{ color: '#34c759' }}>{formatCurrency(bidAmount)}</strong>.
+              Thank you for registering interest for <strong>Spot #{spot.id} ({spot.name})</strong>.
+              Fund My Mac is in public preview while Razorpay merchant approval completes.
+              We will notify <strong>{email}</strong> the moment bidding officially opens.
             </p>
-
-            <div
-              style={{
-                background: '#f5f5f7',
-                borderRadius: '12px',
-                padding: '14px 18px',
-                textAlign: 'left',
-                margin: '0 auto 20px',
-                border: '1px solid #e5e5ea',
-                fontSize: '12px'
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span style={{ color: 'var(--ink-2)' }}>20% Deposit Paid:</span>
-                <strong style={{ color: 'var(--ink)' }}>{formatCurrency(calculatedDeposit)}</strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span style={{ color: 'var(--ink-2)' }}>Remaining Balance if Won:</span>
-                <strong style={{ color: 'var(--ink)' }}>{formatCurrency(remainingBalance)}</strong>
-              </div>
-              <div style={{ borderTop: '1px solid #e5e5ea', paddingTop: '8px', color: '#0071e3', fontSize: '11px' }}>
-                🛡️ If outbid, your {formatCurrency(calculatedDeposit)} deposit is automatically refunded to your card.
-              </div>
-            </div>
 
             <button
               type="button"
               onClick={onClose}
               className="bmm-btn-blue"
-              style={{ padding: '10px 32px', fontSize: '14px' }}
+              style={{ padding: '10px 32px', fontSize: '14px', borderRadius: '980px' }}
             >
               Done
             </button>
           </div>
         ) : (
           <form onSubmit={handleBidSubmit} className="bmm-outbid-form">
-            {/* Bid Amount Input & 20% Deposit Calculator */}
-            <div
-              style={{
-                background: 'linear-gradient(135deg, rgba(0, 113, 227, 0.05), rgba(52, 199, 89, 0.05))',
-                border: '1px solid rgba(0, 113, 227, 0.2)',
-                borderRadius: '12px',
-                padding: '14px 18px',
-                margin: '14px 0'
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)', margin: 0 }}>
-                  Your Total Bid Amount: <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <span style={{ fontSize: '11px', color: 'var(--ink-2)' }}>
-                  Min: {formatCurrency(minRequiredBid)}
-                </span>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '20px', fontWeight: 700, color: 'var(--ink)' }}>
-                  {currency === 'INR' ? '₹' : currency === 'EUR' ? '€' : '$'}
-                </span>
-                <input
-                  type="number"
-                  min={minRequiredBid}
-                  step={currency === 'INR' ? 100 : 5}
-                  value={bidAmount}
-                  onChange={(e) => setBidAmount(Number(e.target.value) || 0)}
-                  className="bmm-input-field tabular-nums"
-                  style={{ fontSize: '18px', fontWeight: 700, padding: '8px 12px' }}
-                  required
-                  disabled={isSubmitting}
-                />
-              </div>
-
-              {/* 20% Deposit Breakdown */}
+            {IS_PUBLIC_PREVIEW ? (
               <div
                 style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginTop: '10px',
-                  paddingTop: '8px',
-                  borderTop: '1px solid rgba(0,0,0,0.06)',
-                  fontSize: '12px'
+                  background: 'rgba(0, 113, 227, 0.06)',
+                  border: '1px solid rgba(0, 113, 227, 0.2)',
+                  borderRadius: '12px',
+                  padding: '14px 18px',
+                  margin: '14px 0',
+                  fontSize: '13px',
+                  color: 'var(--ink)',
+                  lineHeight: 1.5
                 }}
               >
-                <div>
-                  <span style={{ color: 'var(--ink-2)', display: 'block' }}>20% Deposit Due Now:</span>
-                  <strong style={{ color: 'var(--blue)', fontSize: '14px' }} className="tabular-nums">
-                    {formatCurrency(calculatedDeposit)}
-                  </strong>
+                ℹ️ <strong>Public Preview Active:</strong> Official pricing and checkout will go live once Razorpay merchant account approval completes. Register below to secure priority waitlist access for Spot #{spot.id}.
+              </div>
+            ) : (
+              /* Live Bid Amount Input & 20% Deposit Calculator */
+              <div
+                style={{
+                  background: 'linear-gradient(135deg, rgba(0, 113, 227, 0.05), rgba(52, 199, 89, 0.05))',
+                  border: '1px solid rgba(0, 113, 227, 0.2)',
+                  borderRadius: '12px',
+                  padding: '14px 18px',
+                  margin: '14px 0'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)', margin: 0 }}>
+                    Your Total Bid Amount: <span style={{ color: '#ef4444' }}>*</span>
+                  </label>
+                  <span style={{ fontSize: '11px', color: 'var(--ink-2)' }}>
+                    Min: {formatCurrency(minRequiredBid)}
+                  </span>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <span style={{ color: 'var(--ink-2)', display: 'block' }}>Balance if Won:</span>
-                  <strong style={{ color: 'var(--ink)', fontSize: '14px' }} className="tabular-nums">
-                    {formatCurrency(remainingBalance)}
-                  </strong>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '18px', fontWeight: 700, color: 'var(--ink)' }}>
+                    {currency === 'INR' ? '₹' : currency === 'EUR' ? '€' : '$'}
+                  </span>
+                  <input
+                    type="number"
+                    min={minRequiredBid}
+                    step={minIncrement}
+                    value={bidAmount}
+                    onChange={(e) => setBidAmount(Number(e.target.value) || minRequiredBid)}
+                    className="bmm-input-field"
+                    style={{ fontSize: '18px', fontWeight: 700 }}
+                    required
+                    disabled={isSubmitting}
+                  />
                 </div>
               </div>
-            </div>
+            )}
 
             {errorMessage && (
               <div
@@ -411,11 +406,11 @@ export const BidModal: React.FC<BidModalProps> = ({
 
             <div className="form-group" style={{ marginBottom: '10px' }}>
               <label className="bmm-form-label">
-                Brand / Sponsor Name: <span style={{ color: '#ef4444' }}>*</span>
+                Brand or Company Name: <span style={{ color: '#ef4444' }}>*</span>
               </label>
               <input
                 type="text"
-                placeholder="e.g. Supabase, Cursor, CleanMyMac"
+                placeholder="e.g. Acme AI, Supabase, YourStartup"
                 value={brandName}
                 onChange={(e) => setBrandName(e.target.value)}
                 className="bmm-input-field"
@@ -431,7 +426,7 @@ export const BidModal: React.FC<BidModalProps> = ({
               </label>
               <input
                 type="url"
-                placeholder="https://yourbrand.com"
+                placeholder="https://yourcompany.com"
                 value={websiteUrl}
                 onChange={(e) => setWebsiteUrl(e.target.value)}
                 className="bmm-input-field"
@@ -440,26 +435,24 @@ export const BidModal: React.FC<BidModalProps> = ({
               />
             </div>
 
-            <div className="form-group" style={{ marginBottom: '10px' }}>
+            <div className="form-group" style={{ marginBottom: '12px' }}>
               <label className="bmm-form-label">
-                Contact Email: <span style={{ color: '#ef4444' }}>*</span>
+                Contact Email Address: <span style={{ color: '#ef4444' }}>*</span>
               </label>
               <input
                 type="email"
-                placeholder="founder@yourbrand.com"
+                placeholder="founder@yourcompany.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="bmm-input-field"
                 required
                 disabled={isSubmitting}
               />
-              <span style={{ fontSize: '11px', color: 'var(--ink-2)', display: 'block', marginTop: '2px' }}>
-                Used for instant outbid alerts and winning settlement links. Never shared publicly.
-              </span>
             </div>
 
+            {/* Logo file upload */}
             <div className="form-group" style={{ marginBottom: '16px' }}>
-              <label className="bmm-form-label">Brand Logo (PNG, SVG, JPG):</label>
+              <label className="bmm-form-label">Brand Logo (Optional preview):</label>
               <input
                 type="file"
                 ref={fileInputRef}
@@ -469,49 +462,39 @@ export const BidModal: React.FC<BidModalProps> = ({
                 style={{ fontSize: '12px', padding: '6px' }}
                 disabled={isSubmitting}
               />
-              {logoError && (
-                <span style={{ color: '#ef4444', fontSize: '11px', display: 'block', marginTop: '2px' }}>
-                  {logoError}
-                </span>
-              )}
+              {logoError && <span style={{ color: '#ef4444', fontSize: '11px', display: 'block', marginTop: '3px' }}>{logoError}</span>}
               {logoPreview && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
                   <img
                     src={logoPreview}
                     alt="Logo preview"
-                    style={{ width: '40px', height: '24px', objectFit: 'contain', border: '1px solid #e5e5ea', borderRadius: '4px' }}
+                    style={{ width: '36px', height: '36px', borderRadius: '6px', objectFit: 'contain', border: '1px solid #e5e5ea' }}
                   />
-                  <span style={{ fontSize: '11px', color: '#34c759' }}>Logo ready for sticker print</span>
+                  <span style={{ fontSize: '11px', color: '#34c759' }}>Logo uploaded for preview</span>
                 </div>
               )}
             </div>
 
-            {/* Outbid Refund Guarantee */}
-            <div
-              style={{
-                background: '#f5f5f7',
-                border: '1px solid #e5e5ea',
-                borderRadius: '8px',
-                padding: '10px 14px',
-                fontSize: '11px',
-                color: 'var(--ink-2)',
-                lineHeight: 1.4,
-                marginBottom: '14px'
-              }}
-            >
-              🛡️ <strong>BrandMyMac Guarantee:</strong> You only pay the 20% deposit ({formatCurrency(calculatedDeposit)}) now. If someone outbids you, your deposit is <strong>automatically refunded in full</strong>. If you win at auction end, your deposit counts toward the total and you pay the remaining balance.
-            </div>
+            <div style={{ borderTop: '1px solid #e5e5ea', paddingTop: '14px', marginTop: '14px' }}>
+              <p style={{ fontSize: '11px', color: 'var(--ink-2)', lineHeight: 1.4, margin: '0 0 12px 0' }}>
+                {IS_PUBLIC_PREVIEW
+                  ? '🔒 We respect your privacy. Enquiries are encrypted in our database under Row-Level Security and are never publicly accessible.'
+                  : '🔒 If outbid, your deposit is automatically refunded in full. Winning bids settle remaining balance at campaign close.'}
+              </p>
 
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="bmm-btn-blue"
-              style={{ width: '100%', padding: '12px', fontSize: '15px', fontWeight: 600 }}
-            >
-              {isSubmitting
-                ? 'Processing Deposit...'
-                : `Place Bid with 20% Deposit (${formatCurrency(calculatedDeposit)}) 🚀`}
-            </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="bmm-btn-blue"
+                style={{ width: '100%', padding: '12px', fontSize: '15px', fontWeight: 600 }}
+              >
+                {isSubmitting
+                  ? 'Submitting...'
+                  : IS_PUBLIC_PREVIEW
+                  ? `Join Priority Waitlist for Spot #${spot.id} 🚀`
+                  : `Place Bid Deposit (${formatCurrency(calculatedDeposit)}) 🚀`}
+              </button>
+            </div>
           </form>
         )}
       </div>

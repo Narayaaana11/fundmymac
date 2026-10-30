@@ -1,6 +1,7 @@
 import React from 'react';
 import type { DisplayCurrency } from './BrandMyMacNavbar';
 import type { CornerState } from '../data/fundMyMacData';
+import { IS_PUBLIC_PREVIEW } from '../config/previewConfig';
 
 interface CornerWidgetProps {
   currency: DisplayCurrency;
@@ -13,19 +14,21 @@ export const CornerWidget: React.FC<CornerWidgetProps> = ({
   cornerData,
   onClaimCorner
 }) => {
-  const currentPaid =
-    currency === 'INR'
-      ? `paid ₹${cornerData.amountInr.toLocaleString('en-IN')}`
-      : currency === 'EUR'
-      ? `paid ${cornerData.amountEur} €`
-      : `paid $${cornerData.amountUsd}`;
+  const currentPaid = IS_PUBLIC_PREVIEW
+    ? 'Public Preview'
+    : currency === 'INR'
+    ? `paid ₹${cornerData.amountInr.toLocaleString('en-IN')}`
+    : currency === 'EUR'
+    ? `paid ${cornerData.amountEur} €`
+    : `paid $${cornerData.amountUsd}`;
 
-  const nextPrice =
-    currency === 'INR'
-      ? `₹${cornerData.nextBidInr.toLocaleString('en-IN')}`
-      : currency === 'EUR'
-      ? `${cornerData.nextBidEur} €`
-      : `$${cornerData.nextBidUsd}`;
+  const nextPrice = IS_PUBLIC_PREVIEW
+    ? 'Pricing Coming Soon'
+    : currency === 'INR'
+    ? `₹${cornerData.nextBidInr.toLocaleString('en-IN')}`
+    : currency === 'EUR'
+    ? `${cornerData.nextBidEur} €`
+    : `$${cornerData.nextBidUsd}`;
 
   return (
     <>
@@ -43,7 +46,11 @@ export const CornerWidget: React.FC<CornerWidgetProps> = ({
           />
           <span className="bmm-corner-name">{cornerData.currentSponsor}</span>
           <span className="bmm-corner-claim-hint">
-            Claim this spot for <strong style={{ color: 'var(--blue)' }}>{nextPrice}</strong>
+            {IS_PUBLIC_PREVIEW ? (
+              <>Claim The Corner · <strong style={{ color: 'var(--blue)' }}>Join Waitlist</strong></>
+            ) : (
+              <>Claim this spot for <strong style={{ color: 'var(--blue)' }}>{nextPrice}</strong></>
+            )}
           </span>
         </div>
 
@@ -56,7 +63,7 @@ export const CornerWidget: React.FC<CornerWidgetProps> = ({
               className="bmm-btn-blue"
               style={{ flex: 1, fontSize: '12px', minHeight: '32px', padding: '6px 12px' }}
             >
-              Claim — {nextPrice}
+              {IS_PUBLIC_PREVIEW ? 'Waitlist — The Corner' : `Claim — ${nextPrice}`}
             </button>
             {cornerData.currentUrl && (
               <a
@@ -78,57 +85,61 @@ export const CornerWidget: React.FC<CornerWidgetProps> = ({
             )}
           </div>
 
-          <p className="bmm-corner-prev-title">PREVIOUSLY HERE</p>
-          <ul style={{ listStyle: 'none', margin: '6px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {cornerData.history && cornerData.history.length > 0 ? (
-              cornerData.history.map((item, idx) => (
-                <li key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px' }}>
-                  <a
-                    href={item.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: 'var(--ink)', textDecoration: 'none', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}
-                  >
-                    {item.name}
-                  </a>
-                  <span style={{ color: 'var(--ink-2)', fontSize: '10px' }} className="tabular-nums">
-                    {item.held}
-                  </span>
-                </li>
-              ))
-            ) : (
-              <li style={{ fontSize: '11px', color: 'var(--ink-2)' }}>No past outbids yet.</li>
-            )}
-          </ul>
+          <span className="bmm-corner-prev-title">PREVIOUSLY HERE</span>
+          <div className="bmm-corner-prev-list">
+            {cornerData.history.slice(0, 4).map((item, idx) => (
+              <div key={idx} className="bmm-corner-prev-item">
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bmm-corner-prev-link"
+                >
+                  <img
+                    src={item.avatarUrl || '/logo-small.png'}
+                    alt={item.name}
+                    className="bmm-corner-prev-avatar"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                  <span>{item.name}</span>
+                </a>
+                <span className="bmm-corner-prev-held">
+                  {IS_PUBLIC_PREVIEW ? 'Archived' : item.held}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       </aside>
 
-      {/* Mobile Fixed Bottom Bar */}
-      <div className="bmm-corner-mobile-bar">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <img
-            src={cornerData.avatarUrl || '/logo-small.png'}
-            alt={cornerData.currentSponsor}
-            style={{ width: '28px', height: '28px', borderRadius: '6px' }}
-          />
-          <div>
-            <span style={{ fontSize: '13px', fontWeight: 600, display: 'block' }}>
-              {cornerData.currentSponsor}
-            </span>
-            <span style={{ fontSize: '11px', color: 'var(--ink-2)' }}>
-              {currentPaid} · <span style={{ color: 'var(--blue)' }}>Claim for {nextPrice}</span>
-            </span>
+      {/* Mobile Top Corner Banner */}
+      <div className="bmm-corner-mobile">
+        <div className="bmm-corner-mobile-inner">
+          <div className="bmm-corner-mobile-left" onClick={onClaimCorner}>
+            <img
+              src={cornerData.avatarUrl || '/logo-small.png'}
+              alt={cornerData.currentSponsor}
+              className="bmm-corner-avatar"
+              onError={(e) => {
+                (e.target as HTMLElement).style.display = 'none';
+              }}
+            />
+            <div className="bmm-corner-mobile-text">
+              <span className="bmm-corner-mobile-label">THE CORNER SPOT</span>
+              <span className="bmm-corner-mobile-name">{cornerData.currentSponsor}</span>
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={onClaimCorner}
+            className="bmm-btn-get-spot"
+            style={{ fontSize: '12px', minHeight: '32px', padding: '4px 12px' }}
+          >
+            {IS_PUBLIC_PREVIEW ? 'Join Waitlist' : 'Claim Corner'}
+          </button>
         </div>
-
-        <button
-          type="button"
-          onClick={onClaimCorner}
-          className="bmm-btn-get-spot"
-          style={{ fontSize: '12px', padding: '6px 14px' }}
-        >
-          Claim Corner
-        </button>
       </div>
     </>
   );

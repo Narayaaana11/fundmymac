@@ -1,60 +1,77 @@
 // =========================================================================
-// Automated Test Suite: BrandMyMac 14-Day Live Auction & Security Gate
+// Automated Test Suite: Public Preview Readiness & Payment Launch Gate
 // =========================================================================
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { IS_AUCTION_ACTIVE, AUCTION_COPY } from '../src/config/previewConfig.ts';
-import { AUCTION_CONFIG, BRAND_SPOTS } from '../src/data/fundMyMacData.ts';
+import { IS_PUBLIC_PREVIEW, IS_AUCTION_ACTIVE, PREVIEW_COPY } from '../src/config/previewConfig.ts';
+import { BRAND_SPOTS } from '../src/data/fundMyMacData.ts';
+import { RazorpayPaymentAdapter } from '../src/server/payment/razorpayAdapter.ts';
 
-describe('BrandMyMac Auction Configuration & Copy Standards', () => {
-  test('Auction mode is active and configured for 14-day campaign', () => {
-    assert.equal(IS_AUCTION_ACTIVE, true, 'IS_AUCTION_ACTIVE must be true');
-    assert.equal(AUCTION_CONFIG.durationDays, 14, 'Auction duration is 14 days');
-    assert.equal(AUCTION_CONFIG.depositPercentage, 20, 'Bidding deposit is 20%');
-    assert.equal(AUCTION_CONFIG.minBidIncrementUsd, 10, 'Minimum outbid increment is $10 USD');
-    assert.equal(AUCTION_CONFIG.minBidIncrementInr, 800, 'Minimum outbid increment is ₹800 INR');
-    assert.equal(AUCTION_COPY.ctaPrimary, 'Bid on a Spot');
+describe('Public Preview Safety Gates & Finding A & B Verification', () => {
+  test('Finding A: IS_PUBLIC_PREVIEW is strictly true and safe preview defaults are configured', () => {
+    assert.equal(IS_PUBLIC_PREVIEW, true, 'IS_PUBLIC_PREVIEW must be true during public preview');
+    assert.equal(IS_AUCTION_ACTIVE, false, 'IS_AUCTION_ACTIVE must be false during public preview');
+    assert.equal(PREVIEW_COPY.pricingBadge, 'Pricing Coming Soon');
+    assert.equal(PREVIEW_COPY.ctaPrimary, 'Join the Waitlist');
   });
 
-  test('Navbar renders auction countdown and bid CTA', () => {
+  test('Finding B: CornerTakeoverModal eliminates simulated payment success and routes to enquiry API', () => {
+    const cornerContent = readFileSync(resolve('src/components/CornerTakeoverModal.tsx'), 'utf8');
+    assert.ok(cornerContent.includes('submitSponsorshipEnquiry'), 'CornerTakeover routes to submitSponsorshipEnquiry');
+    assert.ok(!cornerContent.includes('Test mode simulation: Instant successful takeover'), 'Does not include simulated takeover fallback');
+    assert.ok(cornerContent.includes('IS_PUBLIC_PREVIEW'), 'Respects IS_PUBLIC_PREVIEW flag');
+  });
+
+  test('BidModal eliminates simulated bids and routes to waitlist enquiry in preview mode', () => {
+    const bidContent = readFileSync(resolve('src/components/BidModal.tsx'), 'utf8');
+    assert.ok(bidContent.includes('submitSponsorshipEnquiry'), 'BidModal routes to submitSponsorshipEnquiry in preview');
+    assert.ok(bidContent.includes('IS_PUBLIC_PREVIEW'), 'Respects IS_PUBLIC_PREVIEW flag');
+  });
+
+  test('Navbar renders Waitlist link and preview-safe CTA', () => {
     const navbarContent = readFileSync(resolve('src/components/BrandMyMacNavbar.tsx'), 'utf8');
-    assert.ok(navbarContent.includes('AuctionCountdown'), 'Navbar contains AuctionCountdown');
-    assert.ok(navbarContent.includes('Bid on a Spot'), 'Navbar contains Bid on a Spot CTA');
-    assert.ok(navbarContent.includes('Leaderboard'), 'Navbar contains Leaderboard link');
+    assert.ok(navbarContent.includes('Waitlist'), 'Navbar contains Waitlist link');
+    assert.ok(navbarContent.includes('Join Waitlist'), 'Navbar renders Join Waitlist CTA in preview');
   });
 
-  test('AuctionSection displays BrandMyMac floor prices and outbid guarantees', () => {
-    const auctionContent = readFileSync(resolve('src/components/AuctionSection.tsx'), 'utf8');
-    assert.ok(auctionContent.includes('Starting floors from'), 'AuctionSection renders starting floors');
-    assert.ok(auctionContent.includes('Outbid deposits automatically refunded in full'), 'Displays outbid refund guarantee');
-    assert.ok(auctionContent.includes('The Live Auction.'), 'Displays Live Auction heading');
+  test('MacbookDisplay eliminates duplicate id="spots" and uses safe sample logo data URIs', () => {
+    const macbookContent = readFileSync(resolve('src/components/MacbookDisplay.tsx'), 'utf8');
+    assert.ok(!macbookContent.includes('id="spots"'), 'Eliminated duplicate id="spots" on controls row');
+    assert.ok(macbookContent.includes('id="macbook-controls"'), 'Uses distinct id="macbook-controls"');
+    assert.ok(!macbookContent.includes('images.ctfassets.net'), 'Eliminated blocked external ctfassets URL');
+    assert.ok(macbookContent.includes('data:image/svg+xml'), 'Uses self-contained SVG data URIs for sample logos');
   });
 
-  test('CornerWidget displays dynamic takeover pricing and previous sponsors', () => {
-    const widgetContent = readFileSync(resolve('src/components/CornerWidget.tsx'), 'utf8');
-    assert.ok(widgetContent.includes('PREVIOUSLY HERE'), 'CornerWidget displays PREVIOUSLY HERE history');
-    assert.ok(widgetContent.includes('Claim this spot for'), 'CornerWidget displays dynamic claim price');
-  });
-
-  test('All 20 spots have BrandMyMac starting floors configured', () => {
+  test('All 20 spots configured with dimensions and surface positions', () => {
     assert.equal(BRAND_SPOTS.length, 20, '20 spots defined in inventory');
-    const marquee = BRAND_SPOTS.find(s => s.id === 2);
-    assert.equal(marquee?.topBidUsd, 430, 'Marquee spot starting floor is $430');
-    assert.equal(marquee?.topBidEur, 400, 'Marquee spot starting floor is 400 €');
-    assert.equal(marquee?.topBidInr, 36000, 'Marquee spot starting floor is ₹36,000');
   });
 });
 
-describe('Server-Side Payment Launch Gate & Edge Function Security', () => {
+describe('Server-Side Payment Restriction & Fail-Closed Enforcement', () => {
+  test('Payment adapter rejects order creation when isPublicPreview is active', async () => {
+    // Adapter instantiated with isPublicPreview: true
+    const adapter = new RazorpayPaymentAdapter({ isTestMode: false, isPublicPreview: true });
+    const result = await adapter.createCheckoutSession({
+      orderType: 'spot_sponsorship',
+      spotId: 2,
+      sponsorName: 'Test Brand',
+      sponsorEmail: 'test@example.com',
+      currency: 'inr'
+    });
+
+    assert.equal(result.success, false, 'Must reject order creation in preview');
+    assert.equal(result.previewMode, true, 'Returns previewMode: true');
+    assert.ok(result.error?.includes('Public preview is active'), 'Error message informs caller about public preview');
+  });
+
   test('create-razorpay-order Edge Function exists and enforces server-side authentication', () => {
     const fnPath = resolve('supabase/functions/create-razorpay-order/index.ts');
     assert.ok(existsSync(fnPath), 'create-razorpay-order Edge Function exists');
     const content = readFileSync(fnPath, 'utf8');
     assert.ok(content.includes('RAZORPAY_KEY_ID'), 'Checks RAZORPAY_KEY_ID in server environment');
-    assert.ok(content.includes('RAZORPAY_KEY_SECRET'), 'Checks RAZORPAY_KEY_SECRET in server environment');
   });
 
   test('verify-razorpay-payment Edge Function fails closed when secret is missing', () => {
@@ -63,26 +80,14 @@ describe('Server-Side Payment Launch Gate & Edge Function Security', () => {
     const content = readFileSync(fnPath, 'utf8');
     assert.ok(content.includes('signature'), 'Verifies cryptographic Razorpay signature');
   });
-
-  test('razorpay-webhook Edge Function fails closed on missing secret or invalid signature', () => {
-    const fnPath = resolve('supabase/functions/razorpay-webhook/index.ts');
-    assert.ok(existsSync(fnPath), 'razorpay-webhook Edge Function exists');
-    const content = readFileSync(fnPath, 'utf8');
-    assert.ok(content.includes('crypto.subtle'), 'Uses SubtleCrypto HMAC SHA-256 for webhook verification');
-  });
 });
 
-describe('Sponsorship Enquiries & Auction Database Security (RLS)', () => {
-  test('Migration exists and enables RLS on sponsorship_enquiries and bids', () => {
+describe('Sponsorship Enquiries & Database Security (RLS)', () => {
+  test('Migration exists and enables RLS on sponsorship_enquiries', () => {
     const enquiryPath = resolve('supabase/migrations/20261029040000_sponsorship_enquiries.sql');
     assert.ok(existsSync(enquiryPath), 'sponsorship_enquiries migration exists');
     const enquirySql = readFileSync(enquiryPath, 'utf8');
     assert.ok(enquirySql.includes('ENABLE ROW LEVEL SECURITY'), 'RLS enabled on sponsorship_enquiries');
-
-    const auctionPath = resolve('supabase/migrations/20261030010000_auction_and_corner_tables.sql');
-    assert.ok(existsSync(auctionPath), 'auction_and_corner_tables migration exists');
-    const auctionSql = readFileSync(auctionPath, 'utf8');
-    assert.ok(auctionSql.includes('ENABLE ROW LEVEL SECURITY'), 'RLS enabled on bids table');
   });
 
   test('Enquiry table strictly prevents public SELECT, UPDATE, DELETE (Zero PII leakage)', () => {

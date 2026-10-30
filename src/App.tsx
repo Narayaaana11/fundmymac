@@ -13,6 +13,7 @@ import { VesperMission } from './components/VesperMission';
 import { EventsRoadmap } from './components/EventsRoadmap';
 import { SponsorsWall } from './components/SponsorsWall';
 import { AuctionSection } from './components/AuctionSection';
+import { WaitlistSection } from './components/WaitlistSection';
 import { HowItWorks } from './components/HowItWorks';
 import { MachineSpecs } from './components/MachineSpecs';
 import { FAQSection } from './components/FAQSection';
@@ -22,6 +23,7 @@ import { DonationModal } from './components/DonationModal';
 import { CheckoutVerificationModal } from './components/CheckoutVerificationModal';
 import { LiveActivityTicker } from './components/LiveActivityTicker';
 import { RealtimeMetricsRow } from './components/RealtimeMetricsRow';
+import { IS_PUBLIC_PREVIEW } from './config/previewConfig';
 
 export const App: React.FC = () => {
   const [currency, setCurrency] = useState<DisplayCurrency>('USD');
@@ -358,17 +360,21 @@ export const App: React.FC = () => {
       <main>
         {/* Hero Section */}
         <header className="bmm-hero">
-          {/* Live Auction Notification Banner */}
+          {/* Live Auction / Preview Notification Banner */}
           <div
             className="bmm-pill-badge-green"
             style={{
               marginBottom: '16px',
-              background: 'rgba(52, 199, 89, 0.12)',
-              color: '#27ae60',
-              border: '1px solid rgba(52, 199, 89, 0.3)'
+              background: IS_PUBLIC_PREVIEW ? 'rgba(0, 113, 227, 0.1)' : 'rgba(52, 199, 89, 0.12)',
+              color: IS_PUBLIC_PREVIEW ? '#0071e3' : '#27ae60',
+              border: IS_PUBLIC_PREVIEW ? '1px solid rgba(0, 113, 227, 0.25)' : '1px solid rgba(52, 199, 89, 0.3)'
             }}
           >
-            <span>🔥 14-DAY LIVE AUCTION · 20% DEPOSIT TO BID · 100% OUTBID REFUND</span>
+            <span>
+              {IS_PUBLIC_PREVIEW
+                ? '✨ PUBLIC PREVIEW · SPONSORSHIPS OPENING SOON · JOIN PRIORITY WAITLIST'
+                : '🔥 14-DAY LIVE AUCTION · 20% DEPOSIT TO BID · 100% OUTBID REFUND'}
+            </span>
           </div>
 
           {/* Real-time WebSocket Metrics Row */}
@@ -446,16 +452,17 @@ export const App: React.FC = () => {
               className="bmm-btn-blue"
               style={{ padding: '12px 28px', fontSize: '15px' }}
             >
-              🏷️ Bid on a Spot (From {currency === 'INR' ? '₹11,300' : '$135'})
+              {IS_PUBLIC_PREVIEW
+                ? '🏷️ Inspect Sponsorship Spots'
+                : `🏷️ Bid on a Spot (From ${currency === 'INR' ? '₹11,300' : '$135'})`}
             </button>
-            <button
-              type="button"
-              onClick={() => setIsLeaderboardOpen(true)}
+            <a
+              href="#waitlist"
               className="bmm-btn-outline"
-              style={{ padding: '12px 22px', fontSize: '14px', borderRadius: '980px', display: 'inline-flex', alignItems: 'center' }}
+              style={{ padding: '12px 22px', fontSize: '14px', borderRadius: '980px', display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}
             >
-              🏆 View Leaderboard
-            </button>
+              📝 Join Priority Waitlist
+            </a>
             <button
               type="button"
               onClick={() => setIsCornerModalOpen(true)}
@@ -516,6 +523,9 @@ export const App: React.FC = () => {
           onOpenLeaderboard={() => setIsLeaderboardOpen(true)}
           isLiveSync={isLiveSync}
         />
+
+        {/* Priority Waitlist & Sponsorship Enquiry */}
+        <WaitlistSection />
 
         {/* 5. How It Works (3 Steps) */}
         <HowItWorks />

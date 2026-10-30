@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import type { BrandSpot } from '../data/fundMyMacData';
 import { BRAND_SPOTS } from '../data/fundMyMacData';
-
+import { IS_PUBLIC_PREVIEW } from '../config/previewConfig';
 import type { DisplayCurrency } from './BrandMyMacNavbar';
 
 interface MacbookDisplayProps {
@@ -72,6 +72,7 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
   };
 
   const formatPrice = (eur: number, usd: number, inr?: number) => {
+    if (IS_PUBLIC_PREVIEW) return 'Pricing Coming Soon';
     if (currency === 'INR') {
       const val = inr || Math.round(usd * 84);
       return `₹${val.toLocaleString('en-IN')}`;
@@ -120,7 +121,7 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
   return (
     <div className="bmm-stage-container">
       {/* Surface Selector Pill (Lid / Inside) */}
-      <div className="bmm-toggle-row" id="spots">
+      <div className="bmm-toggle-row" id="macbook-controls">
         <div role="group" aria-label="Side of the machine" className="bmm-pill-toggle">
           <button
             type="button"
@@ -140,7 +141,7 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
           </button>
         </div>
 
-        {/* Live Logo Try-On Tool Toggle (Untitled UI Style) */}
+        {/* Live Logo Try-On Tool Toggle */}
         <button
           type="button"
           onClick={() => setShowLogoTester(!showLogoTester)}
@@ -158,9 +159,9 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
             <div className="tester-samples" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
               <span className="tester-hint-title" style={{ fontSize: '12px', fontWeight: 600 }}>Test Any Logo:</span>
               {[
-                { name: 'Stripe', url: 'https://images.ctfassets.net/f60q1anpxzid/asset-3/stripe.png' },
-                { name: 'Supabase', url: 'https://assets.stickpng.com/images/62c5c56d252e0081d58d929b.png' },
-                { name: 'Linear', url: 'https://linear.app/static/linear-logo.png' }
+                { name: 'Stripe', url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 25"><text y="20" font-size="20" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-weight="bold" fill="%23635bff">stripe</text></svg>' },
+                { name: 'Supabase', url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%233ecf8e" d="M21.362 9.354H12V.396a.396.396 0 0 0-.716-.233L2.203 12.424a.396.396 0 0 0 .319.638H12v8.958a.396.396 0 0 0 .716.233l9.081-12.261a.396.396 0 0 0-.319-.638z"/></svg>' },
+                { name: 'Vercel', url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%23000" d="M12 1L24 22H0L12 1z"/></svg>' }
               ].map((sample) => (
                 <button
                   key={sample.name}
@@ -234,15 +235,18 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
                 >
                   #13 Palm Rest
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setPreviewTargetSpotId(19)}
-                  className={`tester-sample-chip ${previewTargetSpotId === 19 ? 'active' : ''}`}
-                >
-                  #19 Charger
-                </button>
               </div>
             )}
+
+            <button
+              type="button"
+              onClick={() => setShowLogoTester(false)}
+              className="tester-close-btn"
+              aria-label="Close logo preview tool"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', fontSize: '14px', color: 'var(--ink-2)' }}
+            >
+              ✕
+            </button>
           </div>
         </div>
       )}
@@ -293,6 +297,7 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
                 {lidSpots.map((spot) => (
                   <div
                     key={spot.id}
+                    data-spot-id={spot.id}
                     onClick={() => onSpotClick(spot)}
                     className={`bmm-spot-box ${viewMode === 'final' && !spot.isSold && !spot.logoUrl && !shouldShowPreviewLogo(spot.id) ? 'is-final-mode' : ''}`}
                     style={{
@@ -368,6 +373,7 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
                 return (
                   <div
                     key={spot.id}
+                    data-spot-id={spot.id}
                     onClick={() => onSpotClick(spot)}
                     className={`bmm-spot-box bmm-inside-spot ${viewMode === 'final' && !spot.isSold && !spot.logoUrl && !shouldShowPreviewLogo(spot.id) ? 'is-final-mode' : ''}`}
                     style={{
@@ -439,7 +445,7 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
                 className="bmm-charger-spot-overlay"
                 onClick={() => onSpotClick(chargerSpot)}
               >
-                <div className={`bmm-spot-box ${viewMode === 'final' && !chargerSpot.isSold && !chargerSpot.logoUrl && !shouldShowPreviewLogo(chargerSpot.id) ? 'is-final-mode' : ''}`} style={{ height: '100%', width: '100%' }}>
+                <div data-spot-id={chargerSpot.id} className={`bmm-spot-box ${viewMode === 'final' && !chargerSpot.isSold && !chargerSpot.logoUrl && !shouldShowPreviewLogo(chargerSpot.id) ? 'is-final-mode' : ''}`} style={{ height: '100%', width: '100%' }}>
                   <div className="bmm-spot-content" style={{ padding: '4px' }}>
                     {shouldShowPreviewLogo(chargerSpot.id) ? (
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -473,7 +479,7 @@ export const MacbookDisplay: React.FC<MacbookDisplayProps> = ({
                 className="bmm-mouse-spot-overlay"
                 onClick={() => onSpotClick(mouseSpot)}
               >
-                <div className={`bmm-spot-box ${viewMode === 'final' && !mouseSpot.isSold && !mouseSpot.logoUrl && !shouldShowPreviewLogo(mouseSpot.id) ? 'is-final-mode' : ''}`} style={{ height: '100%', width: '100%' }}>
+                <div data-spot-id={mouseSpot.id} className={`bmm-spot-box ${viewMode === 'final' && !mouseSpot.isSold && !mouseSpot.logoUrl && !shouldShowPreviewLogo(mouseSpot.id) ? 'is-final-mode' : ''}`} style={{ height: '100%', width: '100%' }}>
                   <div className="bmm-spot-content" style={{ padding: '4px' }}>
                     {shouldShowPreviewLogo(mouseSpot.id) ? (
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>

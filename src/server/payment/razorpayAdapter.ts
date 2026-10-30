@@ -35,6 +35,7 @@ export interface RazorpayAdapterConfig {
   supabaseUrl?: string;
   supabaseServiceKey?: string;
   isTestMode?: boolean;
+  isPublicPreview?: boolean;
 }
 
 export class RazorpayPaymentAdapter {
@@ -71,7 +72,8 @@ export class RazorpayPaymentAdapter {
       razorpayWebhookSecret: config?.razorpayWebhookSecret || process.env.RAZORPAY_WEBHOOK_SECRET,
       supabaseUrl: config?.supabaseUrl || process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
       supabaseServiceKey: config?.supabaseServiceKey || process.env.SUPABASE_SERVICE_ROLE_KEY,
-      isTestMode: config?.isTestMode ?? (process.env.NODE_ENV === 'test')
+      isTestMode: config?.isTestMode ?? (process.env.NODE_ENV === 'test'),
+      isPublicPreview: config?.isPublicPreview ?? (process.env.CHECKOUT_ENABLED === 'false')
     };
 
     if (this.config.supabaseUrl && this.config.supabaseServiceKey) {
@@ -87,6 +89,15 @@ export class RazorpayPaymentAdapter {
    */
   async createCheckoutSession(params: CreateCheckoutSessionParams): Promise<CheckoutSessionResult> {
     try {
+      // 0. Server-side fail-closed preview gate: Reject new orders when preview mode is active
+      if (this.config.isPublicPreview) {
+        return {
+          success: false,
+          previewMode: true,
+          error: 'Order creation rejected: Public preview is active; checkout is disabled pending merchant approval.'
+        };
+      }
+
       // 1. Validate sponsor contact input
       if (!params.sponsorName || params.sponsorName.trim().length === 0) {
         return { success: false, error: 'Sponsor name is required' };

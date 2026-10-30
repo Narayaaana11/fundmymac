@@ -3,6 +3,7 @@ import type { BrandSpot } from '../data/fundMyMacData';
 import { BRAND_SPOTS } from '../data/fundMyMacData';
 import { SpotlightCard } from './SpotlightCard';
 import type { DisplayCurrency } from './BrandMyMacNavbar';
+import { IS_PUBLIC_PREVIEW } from '../config/previewConfig';
 
 interface AuctionSectionProps {
   currency: DisplayCurrency;
@@ -32,6 +33,7 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
   const totalBidsCount = activeSpots.reduce((acc, s) => acc + s.bidCount, 0);
 
   const formatPrice = (eur: number, usd: number, inr?: number) => {
+    if (IS_PUBLIC_PREVIEW) return 'Pricing Coming Soon';
     if (currency === 'INR') {
       const val = inr || Math.round(usd * 84);
       return `₹${val.toLocaleString('en-IN')}`;
@@ -59,22 +61,38 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
             <span style={{ background: isLiveSync ? '#34c759' : '#0071e3' }} />
             <span style={{ background: isLiveSync ? 'rgba(52, 199, 89, 0.4)' : 'rgba(0, 113, 227, 0.4)' }} />
           </span>
-          <span>· {openSpotsCount} of {activeSpots.length} Sticker Spaces in Live Auction</span>
+          <span>
+            {IS_PUBLIC_PREVIEW
+              ? `· ${openSpotsCount} of ${activeSpots.length} Sticker Spaces in Public Preview`
+              : `· ${openSpotsCount} of ${activeSpots.length} Sticker Spaces in Live Auction`}
+          </span>
           <span className="bmm-badge-divider">|</span>
           <span className="bmm-bids-count-pill tabular-nums">
-            {totalBidsCount} {totalBidsCount === 1 ? 'bid' : 'bids'} total
+            {IS_PUBLIC_PREVIEW ? 'Waitlist Open' : `${totalBidsCount} ${totalBidsCount === 1 ? 'bid' : 'bids'} total`}
           </span>
         </div>
 
-        <h2 className="bmm-auction-h2">The Live Auction.</h2>
+        <h2 className="bmm-auction-h2">
+          {IS_PUBLIC_PREVIEW ? 'Sponsorship Spaces & Positions.' : 'The Live Auction.'}
+        </h2>
         <p className="bmm-auction-desc">
-          Every space shows its current top bid. Click any spot to inspect perks and place your bid with a 20% commitment deposit.
+          {IS_PUBLIC_PREVIEW
+            ? 'Inspect each of our 20 aluminum sponsorship spots, physical dimensions, and placements. Click any spot to join the priority waitlist.'
+            : 'Every space shows its current top bid. Click any spot to inspect perks and place your bid with a 20% commitment deposit.'}
         </p>
         <p className="bmm-auction-pricing-note">
-          Starting floors from <strong>{formatPrice(125, 135, 11300)} Small</strong> ·{' '}
-          <strong>{formatPrice(200, 215, 18000)} Medium</strong> ·{' '}
-          <strong>{formatPrice(400, 430, 36000)} Marquee</strong>. Minimum outbid increment:{' '}
-          <strong>+{formatPrice(10, 10, 800)}</strong>. Outbid deposits automatically refunded in full.
+          {IS_PUBLIC_PREVIEW ? (
+            <>
+              🔒 <strong>Public Preview Active:</strong> Official pricing will be revealed upon live checkout activation pending Razorpay merchant approval. Register for any spot below to secure priority notification.
+            </>
+          ) : (
+            <>
+              Starting floors from <strong>{formatPrice(125, 135, 11300)} Small</strong> ·{' '}
+              <strong>{formatPrice(200, 215, 18000)} Medium</strong> ·{' '}
+              <strong>{formatPrice(400, 430, 36000)} Marquee</strong>. Minimum outbid increment:{' '}
+              <strong>+{formatPrice(10, 10, 800)}</strong>. Outbid deposits automatically refunded in full.
+            </>
+          )}
         </p>
 
         {/* Featured Prime Positions SpotlightCard */}
@@ -99,6 +117,8 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
             {primeSpots.map((spot, idx) => (
               <li
                 key={spot.id}
+                data-spot-id={spot.id}
+                aria-label={`Inspect Prime Spot #${spot.id}: ${spot.name}`}
                 className="bmm-leaderboard-item"
                 role="button"
                 tabIndex={0}
@@ -129,7 +149,7 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
                 </span>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span className="bmm-leaderboard-amount tabular-nums" style={{ color: '#34c759', fontWeight: 700 }}>
+                  <span className="bmm-leaderboard-amount tabular-nums" style={{ color: '#0071e3', fontWeight: 600 }}>
                     {formatPrice(spot.topBidEur, spot.topBidUsd, spot.topBidInr)}
                   </span>
                   {spot.isSold ? (
@@ -149,7 +169,7 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
                         onSpotClick(spot);
                       }}
                     >
-                      Bid ›
+                      {IS_PUBLIC_PREVIEW ? 'Waitlist ›' : 'Bid ›'}
                     </button>
                   )}
                 </div>
@@ -191,7 +211,7 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
               All Spots Directory ({filteredSpots.length} spaces)
             </h3>
             <span style={{ fontSize: '12px', color: 'var(--ink-2)' }}>
-              Click any spot to view live bids & place counter-bid
+              Click any spot to inspect dimensions & join priority waitlist
             </span>
           </div>
 
@@ -199,6 +219,8 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
             {filteredSpots.map((spot) => (
               <div
                 key={spot.id}
+                data-spot-id={spot.id}
+                aria-label={`Inspect Spot #${spot.id}: ${spot.name}`}
                 className="bmm-spot-row"
                 role="button"
                 tabIndex={0}
@@ -227,7 +249,7 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
                 </div>
 
                 <div className="bmm-spot-row-right">
-                  <span className="bmm-leaderboard-amount tabular-nums" style={{ color: '#34c759', fontWeight: 700 }}>
+                  <span className="bmm-leaderboard-amount tabular-nums" style={{ color: '#0071e3', fontWeight: 600 }}>
                     {formatPrice(spot.topBidEur, spot.topBidUsd, spot.topBidInr)}
                   </span>
                   {spot.isSold ? (
@@ -240,9 +262,9 @@ export const AuctionSection: React.FC<AuctionSectionProps> = ({
                   ) : (
                     <span
                       className="bmm-sold-badge"
-                      style={{ background: 'rgba(52, 199, 89, 0.12)', color: '#27ae60', borderColor: 'rgba(52, 199, 89, 0.3)' }}
+                      style={{ background: 'rgba(0, 113, 227, 0.1)', color: '#0071e3', borderColor: 'rgba(0, 113, 227, 0.25)' }}
                     >
-                      {spot.bidCount > 0 ? `${spot.bidCount} bids` : 'Floor Price'}
+                      {IS_PUBLIC_PREVIEW ? 'Waitlist Open' : spot.bidCount > 0 ? `${spot.bidCount} bids` : 'Floor Price'}
                     </span>
                   )}
                 </div>
